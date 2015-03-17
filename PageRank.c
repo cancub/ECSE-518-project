@@ -114,7 +114,9 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_0, struct
 	m_size = (int)(pow(v_size,2));
 	ones = initialize_vector(v_size,1);
 	// printf("here-1\n");
+	print_2DArray(G);
 	P = initialize_graph(G,&d);
+	print_DubArray(&P);
 	scale(&P,c);
 	printf("here\n");
 	alphaxtimesyTplusA(c,&d,v,&P);
