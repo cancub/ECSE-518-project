@@ -35,7 +35,7 @@ void add_array(struct TwoDArray * a);
 void add_element(struct TwoDArray * a, int n, int value);
 void construct_2DArray(struct TwoDArray * a);
 void print_2DArray(struct TwoDArray * a);
-struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_0, struct DubArray * v);
+struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_0, struct DubArray * v, int * iter);
 void alphaxtimesyTplusA(double alpha, struct DubArray * x, struct DubArray * y, struct DubArray * A);
 void obtain_graph_VE(char * filename, struct TwoDArray * a);
 double dotproduct(struct DubArray * x, struct DubArray * y);
@@ -57,6 +57,7 @@ int main (){
 	struct TwoDArray temp_array;
 	struct DubArray x_0, start_v, result;
 	double fraction;
+	int itercount = 0;
 
 	construct_2DArray(&temp_array);
 
@@ -65,10 +66,10 @@ int main (){
 	fraction = 1/(double)(temp_array.size);
 
 	start_v = initialize_vector((int)(temp_array.size), fraction );
-	x_0 = initialize_vector((int)(temp_array.size), fraction);
+	x_0 = initialize_vector((int)(temp_array.size), 1);
 
 	clock_t start = clock(), diff;
-	result = get_PageRank(&temp_array, &x_0, &start_v);
+	result = get_PageRank(&temp_array, &x_0, &start_v, &itercount);
 	diff = clock() - start;
 	int msec = diff*1000/CLOCKS_PER_SEC;
 
@@ -76,6 +77,7 @@ int main (){
 	print_DubArray(&result);
 
 	printf("Time to converge = %d.%d s\n", msec/1000,msec%1000 );
+	printf("Iterations to converge = %d\n", itercount);
 
 	// print_2DArray(&temp_array);
 
@@ -121,7 +123,7 @@ int main (){
 // function definitions follow
 
 
-struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, struct DubArray * v)
+struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, struct DubArray * v, int * iter)
 {	
 	struct DubArray d,P,ones,x_after;
 	int v_size,m_size,i, j = 0; 
@@ -171,6 +173,8 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 		{
 			x_before->array[i] = x_after.array[i];
 		}
+
+		*iter += 1;
 
 
 		// printf("delta = %9.7f\n\n",delta );
