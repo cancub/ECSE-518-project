@@ -3,6 +3,7 @@
 #include <math.h>
 #include <cblas.h>
 #include <string.h>
+#include <time.h>
 
 struct TwoDArray
 {
@@ -55,17 +56,26 @@ int main (){
 	struct SquareMat test;
 	struct TwoDArray temp_array;
 	struct DubArray x_0, start_v, result;
+	double fraction;
 
 	construct_2DArray(&temp_array);
 
 	obtain_graph_VE(filename,&temp_array);
 
-	start_v = initialize_vector((int)(temp_array.size), 1/(double)(temp_array.size));
-	x_0 = initialize_vector((int)(temp_array.size), 1/(double)(temp_array.size));
+	fraction = 1/(double)(temp_array.size);
 
+	start_v = initialize_vector((int)(temp_array.size), fraction );
+	x_0 = initialize_vector((int)(temp_array.size), fraction);
+
+	clock_t start = clock(), diff;
 	result = get_PageRank(&temp_array, &x_0, &start_v);
+	diff = clock() - start;
+	int msec = diff*1000/CLOCKS_PER_SEC;
 
+	printf("\nResult = \n");
 	print_DubArray(&result);
+
+	printf("Time to converge = %d.%d s\n", msec/1000,msec%1000 );
 
 	// print_2DArray(&temp_array);
 
@@ -114,8 +124,15 @@ int main (){
 struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, struct DubArray * v)
 {	
 	struct DubArray d,P,ones,x_after;
-	int v_size,m_size; 
-	double w, delta, c = 0.85, epsilon = 0.0001;
+	int v_size,m_size,i, j = 0; 
+	double w, delta, c, epsilon;
+
+	printf("Input damping factor c:	\n");
+	scanf("%lf", &c);
+	printf("Input test value epsilon: \n");
+	scanf("%lf", &epsilon);
+
+	printf("\n");
 
 	v_size = (int)(x_before->size);
 	m_size = (int)(pow(v_size,2));
@@ -125,17 +142,39 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 
 	P = initialize_graph(G,&d);
 
+	// print_DubArray(&P);
+
 	scale(&P,c);
+	// print_DubArray(&P);
 	alphaxtimesyTplusA(c,&d,v,&P);
+	// print_DubArray(&P);
 	alphaxtimesyTplusA((1-c),&ones,v,&P);
+	// print_DubArray(&P);
+
+	// sleep(1);
 
 	do
-	{
+	{	
+		// printf("---------------------------------------------------------\n round %d\n",j++);
+		// printf("x to start round = \t");
+		// print_DubArray(x_before);
 		x_after = alphaATtimesx(c,&P,x_before);
-		w = L1_difference(&x_after,x_before);
+		// printf("x to end round = \t");
+		// print_DubArray(&x_after);
+		w = L1_difference(x_before,&x_after);
+		// printf("w = %6.4f\n", w );
 		alphaxplusy_y(w,v,&x_after);
+		// printf("new x to end round = \t");
+		// print_DubArray(&x_after);
 		delta = differce_vector_length(&x_after,x_before);
-	}while(delta < epsilon);
+		for(i = 0; i < x_before->size; i++)
+		{
+			x_before->array[i] = x_after.array[i];
+		}
+
+
+		// printf("delta = %9.7f\n\n",delta );
+	}while(delta > epsilon);
 
 	// printf("here\n");
 
@@ -147,6 +186,8 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 double differce_vector_length(struct DubArray * x1,struct DubArray * x0)
 {
 	struct DubArray temp = makecopy(x1);
+	// printf("copying vector = \t");
+	// print_DubArray(&temp);
 
 	alphaxplusy_y(-1,x0,&temp);
 
@@ -155,8 +196,12 @@ double differce_vector_length(struct DubArray * x1,struct DubArray * x0)
 
 struct DubArray makecopy(struct DubArray * a)
 {
+	int i;
 	struct DubArray temp = initialize_vector((int)(a->size),0);
-	memcpy(temp.array,a->array,temp.size);
+	for(i = 0; i < a->size; i++)
+	{
+		temp.array[i] = a->array[i];
+	}
 	return temp;
 }
 
@@ -238,7 +283,7 @@ double dotproduct(struct DubArray * x, struct DubArray * y)
 void obtain_graph_VE(char * filename, struct TwoDArray * a)
 {
 	
-	int i,j,k, difference;
+	int i,j,k, difference, max_col = 0;
 	FILE * ifp = fopen(filename,"r");
 
 	if (ifp == NULL)
@@ -254,7 +299,6 @@ void obtain_graph_VE(char * filename, struct TwoDArray * a)
 			{
 				difference = i - (a->size);
 
-
 				for(k= 0; k < difference; k++)
 				{
 					add_array(a);
@@ -265,7 +309,22 @@ void obtain_graph_VE(char * filename, struct TwoDArray * a)
 
 			add_element(a,i-1,j);
 
+			if (j > max_col)
+			{
+				max_col = j;
+			}
+
 			// printf("i = %d, j = %d\n", i,j);
+		}
+	}
+
+	if (j > (a->size))
+	{
+		difference = j - (a->size);
+
+		for(k= 0; k < difference; k++)
+		{
+			add_array(a);
 		}
 	}
 
