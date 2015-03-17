@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <cblas.h>
+#include <string.h>
 
 struct TwoDArray
 {
@@ -40,8 +41,12 @@ double dotproduct(struct DubArray * x, struct DubArray * y);
 struct DubArray initialize_vector(int length, double value);
 void print_DubArray(struct DubArray * a);
 void free_DubArray(struct DubArray * a);
-void xplusytoy(struct DubArray * x, struct DubArray * y);
+void alphaxplusy_y(double alpha, struct DubArray * x, struct DubArray * y);
 void scale(struct DubArray * x, double scale);
+struct DubArray alphaATtimesx(double ALPHA, struct DubArray * A,struct DubArray * x);
+double differce_vector_length(struct DubArray * x1,struct DubArray * x0);
+struct DubArray makecopy(struct DubArray * a);
+double L1_difference(struct DubArray * x1, struct DubArray * x0);
 
 int main (){
 	int i, j, max = 0;
@@ -59,6 +64,8 @@ int main (){
 	x_0 = initialize_vector((int)(temp_array.size), 1/(double)(temp_array.size));
 
 	result = get_PageRank(&temp_array, &x_0, &start_v);
+
+	print_DubArray(&result);
 
 	// print_2DArray(&temp_array);
 
@@ -104,37 +111,78 @@ int main (){
 // function definitions follow
 
 
-struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_0, struct DubArray * v)
+struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, struct DubArray * v)
 {	
-	struct DubArray d,P,ones;
+	struct DubArray d,P,ones,x_after;
 	int v_size,m_size; 
-	double c = 0.85;
+	double w, delta, c = 0.85, epsilon = 0.0001;
 
-	v_size = (int)(x_0->size);
+	v_size = (int)(x_before->size);
 	m_size = (int)(pow(v_size,2));
 	ones = initialize_vector(v_size,1);
-	// printf("here-1\n");
-	print_2DArray(G);
+	d = initialize_vector(v_size,0);
+	x_after = initialize_vector(v_size,0);
+
 	P = initialize_graph(G,&d);
-	print_DubArray(&P);
+
 	scale(&P,c);
-	printf("here\n");
 	alphaxtimesyTplusA(c,&d,v,&P);
-	printf("here2\n");
-	alphaxtimesyTplusA(1-c,&ones,v,&P);
+	alphaxtimesyTplusA((1-c),&ones,v,&P);
 
-	// free(d.array);
-
-	// print_DubArray(&d);
-	// print_DubArray(v);
-	print_DubArray(&P);
-	// print_DubArray(&D);
+	do
+	{
+		x_after = alphaATtimesx(c,&P,x_before);
+		w = L1_difference(&x_after,x_before);
+		alphaxplusy_y(w,v,&x_after);
+		delta = differce_vector_length(&x_after,x_before);
+	}while(delta < epsilon);
 
 	// printf("here\n");
 
-	return d;
+	return x_after;
 
 
+}
+
+double differce_vector_length(struct DubArray * x1,struct DubArray * x0)
+{
+	struct DubArray temp = makecopy(x1);
+
+	alphaxplusy_y(-1,x0,&temp);
+
+	return cblas_dasum(temp.size,temp.array,1);
+}
+
+struct DubArray makecopy(struct DubArray * a)
+{
+	struct DubArray temp = initialize_vector((int)(a->size),0);
+	memcpy(temp.array,a->array,temp.size);
+	return temp;
+}
+
+
+double L1_difference(struct DubArray * x1, struct DubArray * x0)
+{
+	double result;
+	result = cblas_dasum(x1->size,x1->array,1) - cblas_dasum(x0->size,x0->array,1);
+	return result;
+}
+
+struct DubArray alphaATtimesx(double ALPHA, struct DubArray * A,struct DubArray * x)
+{
+	struct DubArray y = initialize_vector((int)(x->size),0);
+
+	int v_size = (int)(x->size);
+	char TRANS = 't';
+	int M, N, LDA, INCX, INCY;
+	double BETA = 0;
+	M = N = LDA = v_size;
+	INCX = INCY = 1;
+
+
+	cblas_dgemv(CblasRowMajor,CblasTrans,M,N,ALPHA,A->array,LDA,x->array,INCX,BETA,y.array,INCY);
+
+	return y;
 }
 
 void print_DubArray(struct DubArray * a)
@@ -153,9 +201,9 @@ void scale(struct DubArray * x, double scale)
 	cblas_dscal(x->size, scale, x->array,1);
 }
 
-void xplusytoy(struct DubArray * x, struct DubArray * y)
+void alphaxplusy_y(double alpha, struct DubArray * x, struct DubArray * y)
 {
-	cblas_daxpy(x->size,1,x->array,1,y->array,1);
+	cblas_daxpy(x->size,alpha,x->array,1,y->array,1);
 }
 
 struct DubArray initialize_vector(int length, double value)
