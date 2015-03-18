@@ -77,7 +77,7 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 	struct DubArray d,P,ones,x_after;
 	int v_size,m_size,i,k,j = 0; 
 	double w, delta, c, epsilon = 1;
-	char * verbose;
+	char verbose[3];
 
 	printf("Input damping factor c: ");
 	scanf("%lf", &c);
@@ -85,7 +85,6 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 	scanf("%d", &j);
 	printf("Verbose? <y/n>: ");
 	scanf("%s", verbose);
-	printf("\n");
 
 	for (i = 0; i < j; i++)
 	{
@@ -100,15 +99,25 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 
 	P = initialize_graph(G,&d);
 
-
+	// this section comes from expanding the equation P"= cP' + (1-c)E
+	// expanding we get
+	// P" = c(P + D) + (1-c)(ones x v^T)
+	// P" = c(P +(d x v^T)) + (1-c)(ones x v^T)
+	// P" = cP + c(d x v^T) + (1-c)(ones x v^T)
+	// we can implement this as follows
+	// P <- cP
+	// P <- c(d x v^T) + P
+	// P <- (1-c)(ones x v^T) + P
 	scale(&P,c);
 	alphaxtimesyTplusA(c,&d,v,&P);
 	alphaxtimesyTplusA((1-c),&ones,v,&P);
 
-	printf("P patrix in use:\n");
+	printf("P matrix in use:\n");
 	print_DubMatrix(&P, v_size);
 
-	printf("%d",strcmp(verbose, "y"));
+	// printf("%s\n", verbose );
+	// printf("y\n");
+	// printf("%d\n",strcmp(verbose, "y"));
 	do
 	{			
 		x_after = alphaATtimesx(c,&P,x_before);
@@ -119,7 +128,7 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 
 		*iter += 1;
 
-		if (strcmp(verbose, "y") == 0)
+		if (verbose[0] == 'y' || verbose[0] == 'Y' || verbose[0] == '\n')
 		{
 			printf("---------------------------------------------------------\n round %d\n",j++);
 			printf("x to start round = \t");
