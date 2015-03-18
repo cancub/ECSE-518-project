@@ -115,9 +115,6 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 	printf("P matrix in use:\n");
 	print_DubMatrix(&P, v_size);
 
-	// printf("%s\n", verbose );
-	// printf("y\n");
-	// printf("%d\n",strcmp(verbose, "y"));
 	do
 	{			
 		x_after = alphaATtimesx(c,&P,x_before);
@@ -175,17 +172,13 @@ void obtain_graph_VE(char * filename, struct TwoDArray * a)
 				}
 			}
 
-			// printf("a->size = %d\n", (int)(a->size) );			
-
 			add_element(a,i-1,j);
 
-			// printf("j = %d, max_col = %d, a->size = %d\n", j,max_col,(int)(a->size));
 			if (j > max_col)
 			{
 				max_col = j;
 			}
 
-			// printf("i = %d, j = %d\n", i,j);
 		}
 	}
 
