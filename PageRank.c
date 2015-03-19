@@ -108,8 +108,8 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 	// P <- cP
 	// P <- c(d x v^T) + P
 	// P <- (1-c)(ones x v^T) + P
-	scale(&P,c);
-	alphaxtimesyTplusA(c,&d,v,&P);
+	// scale(&P,c);
+	// alphaxtimesyTplusA(c,&d,v,&P);
 	alphaxtimesyTplusA((1-c),&ones,v,&P);
 
 	printf("P matrix in use:\n");
