@@ -66,7 +66,7 @@ int main (){
 	fraction = 1/(double)(temp_array.size);
 
 	start_v = initialize_vector((int)(temp_array.size), fraction );
-	x_0 = initialize_vector((int)(temp_array.size), 1);
+	x_0 = initialize_vector((int)(temp_array.size), fraction);
 
 	clock_t start = clock(), diff;
 	result = get_PageRank(&temp_array, &x_0, &start_v, &itercount);
