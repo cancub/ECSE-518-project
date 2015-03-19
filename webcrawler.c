@@ -6,7 +6,7 @@
 
 #define BUFFLEN 2500
 
-
+//http://stackoverflow.com/questions/298510/how-to-get-the-current-directory-in-a-c-program
 
 int main()
 {
