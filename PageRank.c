@@ -46,11 +46,7 @@ int main (){
 	}
 
 	start_v = initialize_vector((int)(temp_array.size), fraction );
-<<<<<<< HEAD
-	x_0 = initialize_vector((int)(temp_array.size), fraction);
-=======
 	x_0 = initialize_vector((int)(temp_array.size), x_vals);
->>>>>>> 2fdfdda1c08c96b81f0c936cbaf7b377673beb63
 
 	clock_t start = clock(), diff;
 	result = get_PageRank(&temp_array, &x_0, &start_v, &itercount);
