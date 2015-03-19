@@ -1,72 +1,56 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <cblas.h>
 #include <string.h>
 #include <time.h>
-
-struct TwoDArray
-{
-	struct Array * array;
-	size_t size;
-};
-
-struct Array
-{
-	int * array;
-	size_t size;
-};
-
-struct DubArray
-{
-	double * array;
-	size_t size;
-};
-
-struct SquareMat
-{
-	double ** array;
-	size_t n;	
-};
+#include "dubarrays.h"
+#include "twodarrays.h"
+#include "dubvmalg.h"
 
 struct DubArray initialize_graph(struct TwoDArray * a, struct DubArray * no_out);
-void print_matrix(struct SquareMat * M);
-void add_array(struct TwoDArray * a);
-void add_element(struct TwoDArray * a, int n, int value);
-void construct_2DArray(struct TwoDArray * a);
-void print_2DArray(struct TwoDArray * a);
 struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_0, struct DubArray * v, int * iter);
-void alphaxtimesyTplusA(double alpha, struct DubArray * x, struct DubArray * y, struct DubArray * A);
 void obtain_graph_VE(char * filename, struct TwoDArray * a);
-double dotproduct(struct DubArray * x, struct DubArray * y);
-struct DubArray initialize_vector(int length, double value);
-void print_DubArray(struct DubArray * a);
-void free_DubArray(struct DubArray * a);
-void alphaxplusy_y(double alpha, struct DubArray * x, struct DubArray * y);
-void scale(struct DubArray * x, double scale);
-struct DubArray alphaATtimesx(double ALPHA, struct DubArray * A,struct DubArray * x);
-double differce_vector_length(struct DubArray * x1,struct DubArray * x0);
-struct DubArray makecopy(struct DubArray * a);
-double L1_difference(struct DubArray * x1, struct DubArray * x0);
+
 
 int main (){
 	int i, j, max = 0;
 	
-	char filename[] = "test_graph.txt";
-	struct SquareMat test;
+	char filename[15] = "test_graphx.txt";
 	struct TwoDArray temp_array;
 	struct DubArray x_0, start_v, result;
-	double fraction;
+	char filenum;
+	char * x_type;
+	double x_vals,fraction;
 	int itercount = 0;
 
 	construct_2DArray(&temp_array);
+
+	printf("Test graph to use:  ");
+	scanf("%c", &filenum);
+	printf("Type of starting x <e>ven/<o>nes: ");
+	scanf("%s", x_type);
+
+	filename[10] = filenum;
 
 	obtain_graph_VE(filename,&temp_array);
 
 	fraction = 1/(double)(temp_array.size);
 
+	if (strcmp(x_type,"e") > 0)
+	{
+		x_vals = 1;
+	}
+	else
+	{
+		x_vals = fraction;
+	}
+
 	start_v = initialize_vector((int)(temp_array.size), fraction );
+<<<<<<< HEAD
 	x_0 = initialize_vector((int)(temp_array.size), fraction);
+=======
+	x_0 = initialize_vector((int)(temp_array.size), x_vals);
+>>>>>>> 2fdfdda1c08c96b81f0c936cbaf7b377673beb63
 
 	clock_t start = clock(), diff;
 	result = get_PageRank(&temp_array, &x_0, &start_v, &itercount);
@@ -79,31 +63,6 @@ int main (){
 	printf("Time to converge = %d.%d s\n", msec/1000,msec%1000 );
 	printf("Iterations to converge = %d\n", itercount);
 
-	// print_2DArray(&temp_array);
-
-	// print_matrix(&netgraph);
-
-	// printf("\n");
-
-	// x.size = 5;
-	// y.size = 5;
-
-	// x.array = (double *)malloc(x.size * sizeof(double));
-	// y.array = (double *)malloc(y.size * sizeof(double));
-
-	// for (i = 0; i < x.size; i++)
-	// {
-	// 	x.array[i] = i+1;
-	// 	y.array[i] = i+2;
-	// }
-
-	// test = xtimesy(&x,&y);
-
-	// printf("result = %8.2f\n", dotproduct(&x,&y));
-
-	// print_matrix(&test);
-
-
 	return 0;
 
 }
@@ -114,27 +73,27 @@ int main (){
 
 
 
-
-
-
-
-
-
-// function definitions follow
+// functions
 
 
 struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, struct DubArray * v, int * iter)
 {	
 	struct DubArray d,P,ones,x_after;
-	int v_size,m_size,i, j = 0; 
-	double w, delta, c, epsilon;
+	int v_size,m_size,i,k,j = 0; 
+	double w, delta, c, epsilon = 1;
+	char verbose[3];
 
-	printf("Input damping factor c:	\n");
+	printf("Input damping factor c: ");
 	scanf("%lf", &c);
-	printf("Input test value epsilon: \n");
-	scanf("%lf", &epsilon);
+	printf("Test value epsilon = 1x10^-");
+	scanf("%d", &j);
+	printf("Verbose? <y/n>: ");
+	scanf("%s", verbose);
 
-	printf("\n");
+	for (i = 0; i < j; i++)
+	{
+		epsilon /= 10;
+	}
 
 	v_size = (int)(x_before->size);
 	m_size = (int)(pow(v_size,2));
@@ -144,40 +103,43 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 
 	P = initialize_graph(G,&d);
 
-	// print_DubArray(&P);
-
+	// this section comes from expanding the equation P"= cP' + (1-c)E
+	// expanding we get
+	// P" = c(P + D) + (1-c)(ones x v^T)
+	// P" = c(P +(d x v^T)) + (1-c)(ones x v^T)
+	// P" = cP + c(d x v^T) + (1-c)(ones x v^T)
+	// we can implement this as follows
+	// P <- cP
+	// P <- c(d x v^T) + P
+	// P <- (1-c)(ones x v^T) + P
 	scale(&P,c);
-	// print_DubArray(&P);
 	alphaxtimesyTplusA(c,&d,v,&P);
-	// print_DubArray(&P);
 	alphaxtimesyTplusA((1-c),&ones,v,&P);
-	// print_DubArray(&P);
 
-	// sleep(1);
+	printf("P matrix in use:\n");
+	print_DubMatrix(&P, v_size);
 
 	do
-	{	
-		// printf("---------------------------------------------------------\n round %d\n",j++);
-		// printf("x to start round = \t");
-		// print_DubArray(x_before);
+	{			
 		x_after = alphaATtimesx(c,&P,x_before);
-		// printf("x to end round = \t");
-		// print_DubArray(&x_after);
-		w = L1_difference(x_before,&x_after);
-		// printf("w = %6.4f\n", w );
-		alphaxplusy_y(w,v,&x_after);
-		// printf("new x to end round = \t");
-		// print_DubArray(&x_after);
+		w = L1_difference(x_before,&x_after);		
+		alphaxplusy_y(w,v,&x_after);		
 		delta = differce_vector_length(&x_after,x_before);
-		for(i = 0; i < x_before->size; i++)
-		{
-			x_before->array[i] = x_after.array[i];
-		}
+		*x_before = makecopy(&x_after);
 
 		*iter += 1;
 
+		if (verbose[0] == 'y' || verbose[0] == 'Y' || verbose[0] == '\n')
+		{
+			printf("---------------------------------------------------------\n round %d\n",j++);
+			printf("x to start round = \t");
+			print_DubArray(x_before);
+			printf("w = %6.4f\n", w );
+			printf("x to end round = \t");
+			print_DubArray(&x_after);
+			printf("delta = %9.7f\n\n",delta );
+		}
 
-		// printf("delta = %9.7f\n\n",delta );
 	}while(delta > epsilon);
 
 	// printf("here\n");
@@ -187,102 +149,7 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 
 }
 
-double differce_vector_length(struct DubArray * x1,struct DubArray * x0)
-{
-	struct DubArray temp = makecopy(x1);
-	// printf("copying vector = \t");
-	// print_DubArray(&temp);
 
-	alphaxplusy_y(-1,x0,&temp);
-
-	return cblas_dasum(temp.size,temp.array,1);
-}
-
-struct DubArray makecopy(struct DubArray * a)
-{
-	int i;
-	struct DubArray temp = initialize_vector((int)(a->size),0);
-	for(i = 0; i < a->size; i++)
-	{
-		temp.array[i] = a->array[i];
-	}
-	return temp;
-}
-
-
-double L1_difference(struct DubArray * x1, struct DubArray * x0)
-{
-	double result;
-	result = cblas_dasum(x1->size,x1->array,1) - cblas_dasum(x0->size,x0->array,1);
-	return result;
-}
-
-struct DubArray alphaATtimesx(double ALPHA, struct DubArray * A,struct DubArray * x)
-{
-	struct DubArray y = initialize_vector((int)(x->size),0);
-
-	int v_size = (int)(x->size);
-	char TRANS = 't';
-	int M, N, LDA, INCX, INCY;
-	double BETA = 0;
-	M = N = LDA = v_size;
-	INCX = INCY = 1;
-
-
-	cblas_dgemv(CblasRowMajor,CblasTrans,M,N,ALPHA,A->array,LDA,x->array,INCX,BETA,y.array,INCY);
-
-	return y;
-}
-
-void print_DubArray(struct DubArray * a)
-{
-	int i;
-	for(i = 0; i < a->size; i++)
-	{
-		printf("%8.2f",a->array[i]);
-	}
-
-	printf("\n");
-}
-
-void scale(struct DubArray * x, double scale)
-{
-	cblas_dscal(x->size, scale, x->array,1);
-}
-
-void alphaxplusy_y(double alpha, struct DubArray * x, struct DubArray * y)
-{
-	cblas_daxpy(x->size,alpha,x->array,1,y->array,1);
-}
-
-struct DubArray initialize_vector(int length, double value)
-{
-	// printf("here1\n");
-	struct DubArray temp;
-	int i;
-	if (length > 0)
-	{
-		temp.size = length;
-		temp.array = (double *)malloc(temp.size * sizeof(double));
-	}
-	else
-	{
-		temp.size = 0;
-		temp.array = (double *)malloc(sizeof(double));
-	}
-
-	for(i = 0; i < length; i++)
-	{
-		temp.array[i] = value;
-	}
-
-	return temp;
-}
-
-double dotproduct(struct DubArray * x, struct DubArray * y)
-{
-	return cblas_ddot((int)(x->size),x->array,1,y->array,1);
-}
 
 void obtain_graph_VE(char * filename, struct TwoDArray * a)
 {
@@ -309,8 +176,6 @@ void obtain_graph_VE(char * filename, struct TwoDArray * a)
 				}
 			}
 
-			// printf("a->size = %d\n", (int)(a->size) );			
-
 			add_element(a,i-1,j);
 
 			if (j > max_col)
@@ -318,13 +183,12 @@ void obtain_graph_VE(char * filename, struct TwoDArray * a)
 				max_col = j;
 			}
 
-			// printf("i = %d, j = %d\n", i,j);
 		}
 	}
 
-	if (j > (a->size))
+	if (max_col > (a->size))
 	{
-		difference = j - (a->size);
+		difference = max_col - (a->size);
 
 		for(k= 0; k < difference; k++)
 		{
@@ -332,106 +196,11 @@ void obtain_graph_VE(char * filename, struct TwoDArray * a)
 		}
 	}
 
+	// sleep(1);
 	fclose(ifp);
 }
 
-void alphaxtimesyTplusA(double alpha, struct DubArray * x, struct DubArray * y, struct DubArray * A)
-{
 
-	// note that in this function, we have result = alpha*x*transpose(y) + A
-	int incx, incy, leny, lenx,lda;	
-	int length = (x->size) * (y->size);
-
-	incx = incy = 1;
-	leny = lda = y->size;
-	lenx = x->size;
-
-	cblas_dger(CblasRowMajor,lenx,leny,alpha,x->array,incx,y->array,incy,A->array,lda);
-
-	// output.n = x->size;
-	// output.array = (double **)malloc(output.n * sizeof(double *));
-	// for(i = 0; i < output.n; i++)
-	// {
-	// 	output.array[i] = (double *)malloc(output.n * sizeof(double));
-
-	// 	for(j = 0; j < output.n; j++)
-	// 	{
-	// 		output.array[i][j] = one_line_matrix[k++];
-	// 	}
-	// }
-}
-
-void print_2DArray(struct TwoDArray * a)
-{
-	int i,j;
-
-	for (i = 0; i < a->size; i++)
-	{
-		for(j = 0; j < (a->array[i]).size; j++)
-		{
-			printf("%3d", (a->array[i]).array[j]);
-		}
-		printf("\n");
-	}
-}
-
-void construct_2DArray(struct TwoDArray * a)
-{
-	a->size = 1;
-	a->array = (struct Array *)malloc(sizeof(struct Array));
-	(a->array[0]).array = (int *)malloc(sizeof(int));
-	(a->array[0]).size = 0;
-}
-
-void add_array(struct TwoDArray * a)
-{
-
-	if(a->size >= 1)
-	{
-		a->size += 1;
-		a->array = (struct Array *)realloc(a->array, a->size * sizeof(struct Array));
-		(a->array[a->size - 1]).array = (int *)malloc(sizeof(int));
-		(a->array[a->size - 1]).size = 0;
-	}
-	else
-	{
-		a->size = 1;
-	}
-}
-
-void add_element(struct TwoDArray * a, int n, int value)
-{
-	// printf("a->array[n = %d]).size = %d\n", n, (int)((a->array[n]).size));
-
-	if((a->array[n]).size >= 1)
-	{	
-		(a->array[n]).size += 1;
-		(a->array[n]).array = (int *)realloc((a->array[n]).array,(a->array[n]).size * sizeof(int));
-		(a->array[n]).array[(a->array[n]).size - 1] = value;
-	}
-	else
-	{
-		(a->array[n]).array[(a->array[n]).size] = value;
-		(a->array[n]).size += 1;	
-	}
-
-	// printf("a->array[n = %d].size = %d, value = %d\n",n,(int)((a->array[n]).size),value );
-}
-
-void print_matrix(struct SquareMat * M)
-{
-	int i,j;
-
-	for(i = 0; i < M->n; i++)
-	{
-		for(j = 0; j < M->n; j++)
-		{
-			printf("%7.3f", M->array[i][j]);
-		}
-
-		printf("\n");
-	}
-}
 
 struct DubArray initialize_graph(struct TwoDArray * a, struct DubArray * no_out)
 {
