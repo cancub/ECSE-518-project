@@ -11,9 +11,10 @@
 //http://stackoverflow.com/questions/298510/how-to-get-the-current-directory-in-a-c-program
 
 char * flip_url(char * url);
-char * fix_errors(char * url);
+char * add_slash(char * url);
 void wget_wrapper(char * website, char * outputfile);
 void crawl_page(char * inputfile, char * newinputfile, char * outputfile);
+char * remove_extra(char * url);
 
 int total_hyperlinks = 1;
 
@@ -21,7 +22,7 @@ int main()
 {
 
 	char * flipped; 
-	int current_state = 0;
+	int current_state = 0, i = 0;
 	FILE * toclear;
 
 	char ** possible_filenames = (char **)malloc(2*sizeof(char *));
@@ -40,37 +41,55 @@ int main()
 	fclose(toclear);	
 	
 	char output[200];	// holds the most recently obtained hyperlink
-	char starter[] = "http://www.google.com";	// the starting node
+	char starter[] = "http://www.mcgill.ca";	// the starting node
 
 	//open the output file
 	FILE * ofp = fopen(final_output,"w");
 	//get the flipped version of the starter node
-	flipped = fix_errors(flip_url(starter));
+	flipped = add_slash(remove_extra(flip_url(starter)));
 	// print it to the output file so that we know if we've seen it before
-	fprintf(ofp, "%s %s %d\n",starter,flipped,total_hyperlinks++);
+	fprintf(ofp, "%s %s %d\n",flipped,starter,total_hyperlinks++);
 	//close to allow for appending to this file
 	fclose(ofp);
 
 	// get all the hyperlinks from the starter node and print them to the initiial input file
-	wget_wrapper("https://accounts.google.com/ServiceLogin?hl=en&continue=http://www.google.com/imghp%%3Fhl%%3Den", possible_filenames[0]);
+	wget_wrapper(starter, possible_filenames[0]);
 	
 
-
-	// crawl_page(possible_filenames[current_state],possible_filenames[abs(1-current_state)],final_output);
-	// current_state = abs(1-current_state);
-	// crawl_page(possible_filenames[current_state],possible_filenames[abs(1-current_state)],final_output);
-	// current_state = abs(1-current_state);
-	// crawl_page(possible_filenames[current_state],possible_filenames[abs(1-current_state)],final_output);
-	
-
+	while(i < 10)
+	{
+		crawl_page(possible_filenames[current_state],possible_filenames[abs(1-current_state)],final_output);
+		current_state = abs(1-current_state);
+		i++;
+	}
 
 	return 0;
 
 }
 
 
+char * remove_extra(char * url)
+{
+	char * test = url;
+	char * result;
+	int total_size;
+
+	test = strchr(url,'?');
+	// printf("test = %s\n", test );
+
+	if (test != NULL)
+	{
+		total_size = test-url;
+		url[total_size] = '\0';
+	}
+
+	return url;
+}
+
 void wget_wrapper(char * website, char * outputfile)
 {
+	// printf("after call website = %s...TEST\n",website );
+
 	char web_address[BUFFLEN] = "wget -q x -O - | tr \"\\t\\r\\n'\" '   \"' | grep -i -o '<a[^>]\\+href[ ]*=[ \\t]*\"\\(ht\\|f\\)tps\\?:[^\"]\\+\"' |  sed -e 's/^.*\"\\([^\"]\\+\\)\".*$/\\1/g' >> y"; 
 	char * after_address = strchr(web_address,'x');
 	int first_copy = after_address - web_address;
@@ -106,22 +125,31 @@ void crawl_page(char * inputfile, char * newinputfile, char * outputfile)
 {
 
 	int i;
-	char * flipped;
+	char * flipped, start[200];
 	int exists = 0;
 	
 
 	FILE * ifp = fopen(inputfile,"r"); //where we will retreive the next hyperlink to be scoured
 	FILE * ofp = fopen(newinputfile,"w"); //where we will store the remainder of the hyperlinks in the file
 
-	char output[200];	//this will hold the first hyperlink in the inputfile
+	char * output;	//this will hold the first hyperlink in the inputfile
 	char dummy[200], test[200];
 
 	//get the first hyperlink
-	fscanf(ifp,"%s", output);
-	printf("output = %s\n", output );
+	fscanf(ifp,"%s", start);
+	// printf("start = %s, length = %d\n", start, (int)(strlen(start)) );
+	output = (char *)malloc(sizeof(char)*strlen(start));
+	output = remove_extra(start);
+
+	// printf("output = %s\n", output );
+
+	output[strlen(start)] = '\0';
+	// printf("output before flipped = %s...TEST\n", output );
 
 	//get the link as how it would appear in the final file
-	flipped = fix_errors(flip_url(output));
+	flipped = flip_url(output);
+	// printf("output after flipped = %s...TEST\n", output );
+	flipped = add_slash(flipped);
 
 	//store the remainder of the hyperlinks in the new input file;
 	while(fscanf(ifp,"%s",test) == 1)
@@ -138,7 +166,7 @@ void crawl_page(char * inputfile, char * newinputfile, char * outputfile)
 	ifp = fopen(outputfile,"r");
 
 	// search through the output file to determine if the link has already been used before
-	while(fscanf(ifp,"%s %s %d", dummy,test, &i) == 3)
+	while(fscanf(ifp,"%s %s %d", test,dummy, &i) == 3)
 	{	
 		if (strcmp(flipped,test) == 0)
 		{
@@ -153,9 +181,11 @@ void crawl_page(char * inputfile, char * newinputfile, char * outputfile)
 	{
 		ofp = fopen(outputfile,"a");
 
-		fprintf(ofp, "%s %s %d\n", output, flipped, total_hyperlinks++);
+		fprintf(ofp, "%s %s %d\n", flipped, output, total_hyperlinks++);
 
 		fclose(ofp);
+
+		
 
 		// add all the links we see while going through this link
 		wget_wrapper(output,newinputfile);
@@ -164,7 +194,7 @@ void crawl_page(char * inputfile, char * newinputfile, char * outputfile)
 
 }
 
-char * fix_errors(char * url)
+char * add_slash(char * url)
 {
 	char * test = url;
 	char * result = (char *)malloc(sizeof(char) * (strlen(url) + 2));
@@ -194,13 +224,17 @@ char * fix_errors(char * url)
 
 char * flip_url(char * url)
 {
+
+
 	int length = strlen(url);
-	char * host, * top_level_domain, * end_of_string, * middle, * filepath, * result, * test = url;
-	char * new_host = (char *)malloc(length*sizeof(char));
+
+	char * host, * top_level_domain, * end_of_string, * middle, * filepath, * result, * hostname;	
 	int tld_size, last_letter_of_host, i, middle_size, hostname_size;
-	char * hostname;
 
+	char * test = url;
 
+	char * new_host = (char *)malloc(length*sizeof(char));
+	
 
 
 	//search for either the '\0' string terminator or the first / to start the path portion
@@ -225,6 +259,8 @@ char * flip_url(char * url)
 		host = (char *)malloc(3*sizeof(char));
 		host[0] = host[1] = host[2] = 'w';
 		hostname_size = 3;
+
+
 
 		if(result == NULL)
 		{
@@ -404,6 +440,9 @@ char * flip_url(char * url)
 	}
 
 	// printf("%s\n",test);
+
+
+	
 
 	return new_host;
 
