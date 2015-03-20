@@ -12,47 +12,41 @@
 
 char * flip_url(char * url);
 char * fix_errors(char * url);
+void crawl_page(FILE * open_output);
 
+char * hyperlink_input_file;
+int total_hyperlinks = 1;
 
 int main()
 {
 
-	char * flipped;
+	char * flipped, filename1[] = "input1.txt", filename2[] = "input2.txt", final_output[] = "final.txt";
+	char ** possible_filenames = (char **)malloc(2*sizeof(char *));
+	// the two input files we will swing back and forth from to allow
+	// for popping of links under a crawl
+	possible_filenames[0] = filename1;
+	possible_filenames[1] = filename2;
+	hyperlink_input_file = possible_filenames[0];
 
-	char output[200];
+	char output[200];	// holds the most recently obtained hyperlink
+	char starter[] = "http://www.google.com";	// the starting node
 
-	int i;
+	//open the output file
+	FILE * ofp = fopen(final_output,"w");
+	//get the flipped version of the starter node
+	flipped = fix_errors(flip_url(starter));
+	// print it to the output file so that we know if we've seen it before
+	fprintf(ofp, "%s %s %d\n",starter,flipped,total_hyperlinks++);
+	//close to allow for appending to this file
+	fclose(ofp);
 
-	// char web_address[BUFFLEN] = "wget -q http://www.github.com -O - |     tr \"\\t\\r\\n'\" '   \"' |     grep -i -o '<a[^>]\\+href[ ]*=[ \\t]*\"\\(ht\\|f\\)tps\\?:[^\"]\\+\"' |     sed -e 's/^.*\"\\([^\"]\\+\\)\".*$/\\1/g' > test.txt"; 
-	// system(web_address);
+	char web_address[BUFFLEN] = "wget -q http://www.google.com -O - |     tr \"\\t\\r\\n'\" '   \"' |     grep -i -o '<a[^>]\\+href[ ]*=[ \\t]*\"\\(ht\\|f\\)tps\\?:[^\"]\\+\"' |     sed -e 's/^.*\"\\([^\"]\\+\\)\".*$/\\1/g' > input1.txt"; 
+	system(web_address);
 
-	// char url[] = "https://github.com";
-
-	// printf("%s\n", flip_url(url));	
-
-
-
-
-
+	ofp = fopen("final.txt","a");
 	FILE * ifp = fopen("test.txt","r");
-	FILE * ofp = fopen("final.txt","a");
+	
 
-
-
-	while(fscanf(ifp,"%s", output) == 1)
-	{
-		// free(output);
-		// output = (char *)malloc(sizeof(char))
-		
-		printf("%d\n", (int)(strlen(output)));
-
-		printf("end of string at %d = %d\n",(int)(strlen(output)),output[strlen(output)] == '\0' );
-
-		flipped = flip_url(output);
-		printf("%s\n",flipped );
-		flipped = fix_errors(flipped);
-		fprintf(ofp, "%s\n",  flipped);
-	};
 
 	return 0;
 
@@ -62,12 +56,35 @@ int main()
 
 
 
+void crawl_page(FILE * open_output)
+{
 
+	int i = 0;
+	
+
+
+	while(fscanf(ifp,"%s", output) == 1)
+	{
+		// free(output);
+		// output = (char *)malloc(sizeof(char))
+		
+		// printf("%d\n", (int)(strlen(output)));
+
+		// printf("end of string at %d = %d\n",(int)(strlen(output)),output[strlen(output)] == '\0' );
+
+		flipped = flip_url(output);
+		// printf("%s\n",flipped );
+		flipped = fix_errors(flipped);
+		// printf("final = %s\n", flipped);
+		fprintf(ofp, "%s %s %d\n",output,flipped,i++);
+	};
+
+}
 
 char * fix_errors(char * url)
 {
 	char * test = url;
-	char * result = (char *)malloc(sizeof(char) * (strlen(url) + 1));
+	char * result = (char *)malloc(sizeof(char) * (strlen(url) + 2));
 
 	int i = 0;
 
@@ -76,10 +93,17 @@ char * fix_errors(char * url)
 		i++;
 	};
 
-
+	if (test[i-1] != '/')
+	{
+		strncpy(result,url,strlen(url));
+		result[strlen(url)]='/';
+	}
+	else
+	{
+		result = url;
+	}
 
 	return result;
-
 }
 
 
