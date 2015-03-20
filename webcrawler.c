@@ -12,22 +12,25 @@
 
 char * flip_url(char * url);
 char * fix_errors(char * url);
-void crawl_page(FILE * open_output);
+void crawl_page(FILE * open_output, char * inputfile, char * outputfile);
+void wget_wrapper(char * website, char * outputfile);
 
-char * hyperlink_input_file;
 int total_hyperlinks = 1;
 
 int main()
 {
 
-	char * flipped, filename1[] = "input1.txt", filename2[] = "input2.txt", final_output[] = "final.txt";
+	char * flipped; 
+
 	char ** possible_filenames = (char **)malloc(2*sizeof(char *));
-	// the two input files we will swing back and forth from to allow
-	// for popping of links under a crawl
+	char filename1[40] = "input1.txt";
+	char filename2[40] = "input2.txt";
 	possible_filenames[0] = filename1;
 	possible_filenames[1] = filename2;
-	hyperlink_input_file = possible_filenames[0];
 
+	char final_output[15] = "final.txt";
+	
+	
 	char output[200];	// holds the most recently obtained hyperlink
 	char starter[] = "http://www.google.com";	// the starting node
 
@@ -40,11 +43,11 @@ int main()
 	//close to allow for appending to this file
 	fclose(ofp);
 
-	char web_address[BUFFLEN] = "wget -q http://www.google.com -O - |     tr \"\\t\\r\\n'\" '   \"' |     grep -i -o '<a[^>]\\+href[ ]*=[ \\t]*\"\\(ht\\|f\\)tps\\?:[^\"]\\+\"' |     sed -e 's/^.*\"\\([^\"]\\+\\)\".*$/\\1/g' > input1.txt"; 
-	system(web_address);
+	// get all the hyperlinks from the starter node and print them to the initiial input file
+	wget_wrapper("http://www.google.com", possible_filenames[0]);
+	
 
-	ofp = fopen("final.txt","a");
-	FILE * ifp = fopen("test.txt","r");
+	// FILE * ifp = fopen("test.txt","r");
 	
 
 
@@ -53,15 +56,48 @@ int main()
 }
 
 
+void wget_wrapper(char * website, char * outputfile)
+{
+	char web_address[BUFFLEN] = "wget -q x -O - |     tr \"\\t\\r\\n'\" '   \"' | grep -i -o '<a[^>]\\+href[ ]*=[ \\t]*\"\\(ht\\|f\\)tps\\?:[^\"]\\+\"' |  sed -e 's/^.*\"\\([^\"]\\+\\)\".*$/\\1/g' > y"; 
+	char * after_address = strchr(web_address,'x');
+	int first_copy = after_address - web_address;
+	after_address += sizeof(char);
+	char * after_file = strchr(web_address,'y');
+	int second_copy = after_file - after_address;
+	after_file += sizeof(char); 
+
+	char final_addr[200];
+
+	int length = 0;
+	strncpy(final_addr + length*sizeof(char), web_address, first_copy);
+	length += first_copy;
+	strncpy(final_addr + length*sizeof(char), website,strlen(website));
+	length += strlen(website);
+	strncpy(final_addr + length*sizeof(char), after_address, second_copy);
+	length += second_copy;
+	strncpy(final_addr + length*sizeof(char), outputfile, strlen(outputfile));
+	length += strlen(outputfile);
+	strcpy(final_addr + length*sizeof(char), after_file);
 
 
 
-void crawl_page(FILE * open_output)
+	printf("final address = %s\n",final_addr );
+
+	system(web_address);
+
+}
+
+
+
+void crawl_page(FILE * open_output, char * inputfile, char * outputfile)
 {
 
 	int i = 0;
+	char * flipped;
 	
+	FILE * ifp = fopen(inputfile,"a");
 
+	char output[200];
 
 	while(fscanf(ifp,"%s", output) == 1)
 	{
@@ -76,7 +112,7 @@ void crawl_page(FILE * open_output)
 		// printf("%s\n",flipped );
 		flipped = fix_errors(flipped);
 		// printf("final = %s\n", flipped);
-		fprintf(ofp, "%s %s %d\n",output,flipped,i++);
+		fprintf(open_output, "%s %s %d\n",output,flipped,total_hyperlinks++);
 	};
 
 }
