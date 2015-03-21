@@ -17,6 +17,7 @@ void crawl_page(char * inputfile, char * newinputfile, char * outputfile);
 char * remove_extra(char * url);
 
 int total_hyperlinks = 1;
+int link_under_wget = 1;
 
 int main()
 {
@@ -33,6 +34,7 @@ int main()
 
 	char final_output[15] = "final.txt";
 
+	// clear all the 
 	toclear = fopen(possible_filenames[0],"w");
 	fclose(toclear);
 	toclear = fopen(possible_filenames[1],"w");
@@ -66,6 +68,10 @@ int main()
 	return 0;
 
 }
+
+
+
+
 
 
 char * remove_extra(char * url)
