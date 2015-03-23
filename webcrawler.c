@@ -56,7 +56,7 @@ int main()
 	wget_wrapper(starter, possible_filenames[0]);
 	
 
-	while(i < 10)
+	while(i < 40)
 	{
 		crawl_page(possible_filenames[current_state],possible_filenames[abs(1-current_state)],final_output);
 		current_state = abs(1-current_state);
