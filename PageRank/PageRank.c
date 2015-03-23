@@ -13,7 +13,6 @@ void obtain_graph_VE(char * filename, struct TwoDArray * a);
 
 
 int main (){
-	int i, j, max = 0;
 	
 	char filename[15] = "test_graphx.txt";
 	struct TwoDArray temp_array;
@@ -75,7 +74,7 @@ int main (){
 struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, struct DubArray * v, int * iter)
 {	
 	struct DubArray d,P,ones,x_after;
-	int v_size,m_size,i,k,j = 0; 
+	int v_size,i,j = 0; 
 	double w, delta, c, epsilon = 1;
 	char verbose[3];
 
@@ -92,7 +91,6 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 	}
 
 	v_size = (int)(x_before->size);
-	m_size = (int)(pow(v_size,2));
 	ones = initialize_vector(v_size,1);
 	d = initialize_vector(v_size,0);
 	x_after = initialize_vector(v_size,0);
@@ -108,8 +106,8 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 	// P <- cP
 	// P <- c(d x v^T) + P
 	// P <- (1-c)(ones x v^T) + P
-	// scale(&P,c);
-	// alphaxtimesyTplusA(c,&d,v,&P);
+	scale(&P,c);
+	alphaxtimesyTplusA(c,&d,v,&P);
 	alphaxtimesyTplusA((1-c),&ones,v,&P);
 
 	printf("P matrix in use:\n");
