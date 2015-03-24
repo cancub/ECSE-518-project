@@ -79,7 +79,7 @@ int main()
         // printf("\n");
         link_under_wget++;
 
-    }while(link_under_wget < 20);
+    }while(link_under_wget < 1);
 
 
 
@@ -102,19 +102,28 @@ int main()
 
 int search_for_link(struct Linked_list * a, struct node * n)
 {
+
     struct node * test;
     test = a->root;
 
-    do
-    {   
-        if ((strcmp(test->filtered_hyperlink, n->filtered_hyperlink) == 0) 
-            && (test->data != 0))
-        {
-            return test->data;
-        }
+    printf("a->size = %d\n", a->size);
 
-        to_next(test);
-    }while(test != a->root);
+    if (a->size > 0)
+    {
+        do
+        {   
+            printf("%s, %s\n", test->filtered_hyperlink, n->filtered_hyperlink);
+            if ((strcmp(test->filtered_hyperlink, n->filtered_hyperlink) == 0) 
+                && (test->data != 0))
+            {
+                printf("*************here for link %s\n",n->hyperlink );
+                return test->data;
+            }
+
+            to_next(test);
+            printf("test == a->root? %d\n",test == a->root);
+        }while(test != a->root);
+    }
 
     return 0;
 }
@@ -142,7 +151,8 @@ void add_edge(struct Linked_list * a, int from_index, int to_index)
             if(search_Array(temp->edges, to_index) == 0)
             {
                 (temp->edges).size += 1;
-                (temp->edges).array = (int *)realloc((temp->edges).array, sizeof(int)*((temp->edges).size));
+                (temp->edges).array = (int *)realloc((temp->edges).array, 
+                    sizeof(int)*((temp->edges).size));
                 ((temp->edges).array)[(temp->edges).size - 1] = to_index;
             }
             
@@ -169,9 +179,13 @@ void add_link(struct Linked_list * a, char * link, int index)
     // printf("after copying = %s\n",temp->hyperlink );
 
     temp->data = index;
-    construct_Array(temp->edges); 
+    construct_Array(temp->edges);
 
-    append_node(a,temp);
+    printf("index = %d, link_under_wget = %d\n", index, link_under_wget);
+    if(index != link_under_wget || (search_for_link(a,temp) == 0))
+    {
+        append_node(a,temp);
+    }
 }
 
 
@@ -196,7 +210,6 @@ void filter_and_store(struct Linked_list * a, char * raw_links)
         // link to the parsed list
 
         // printf("unfiltered = %s, filtered = %s\n",link_to_filter, remove_extra(link_to_filter));
-
         add_link(a,link_to_filter, link_under_wget);
         // printf("Current queue:\n");
         // print_linked_list(a);
@@ -312,7 +325,7 @@ sed -e 's/^.*\"\\([^\"]\\+\\)\".*$/\\1/g' > y";
     strcpy(final_wget + length*sizeof(char), after_file);
 
     // call the wget
-    printf("%s\n",final_wget );
+    // printf("%s\n",final_wget );
     system(final_wget);
 
 }

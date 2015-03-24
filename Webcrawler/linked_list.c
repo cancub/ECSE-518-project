@@ -138,6 +138,8 @@ struct Linked_list * initialize_linked_list(int size)
     a->root->next = a->root;
     a->root->previous = a->root;
 
+    ((a->root)->edges).size == 0;
+
     for(i = 1; i < size; i++)
     {   
         add_node(a);
