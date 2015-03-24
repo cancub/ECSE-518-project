@@ -20,5 +20,6 @@ void add_element(struct TwoDArray * a, int n, int value);
 void construct_2DArray(struct TwoDArray * a);
 void construct_Array(struct Array a);
 void print_2DArray(struct TwoDArray * a);
+int search_Array(struct Array a, int value);
 
 #endif

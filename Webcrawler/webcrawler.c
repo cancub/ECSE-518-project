@@ -27,7 +27,7 @@ char * append_directory(char * filename);
 void filter_and_store(struct Linked_list * a, char * raw_links);
 char * get_next_link(struct Linked_list * queue, struct Linked_list * parsed);
 void add_edge(struct Linked_list * a, int from_index, int to_index);
-void add_link(struct Linked_list * a, char * hyperlink, char * filtered_hyperlink, int index);
+void add_link(struct Linked_list * a, char * link, int index);
 char * clean_link(char * url);
 int search_for_link(struct Linked_list * a, struct node * n);
 // void remove_file(char * to_remove);
@@ -37,7 +37,7 @@ int link_under_wget = 1;
 
 int main()
 {
-    char * next_hyperlink; 
+    char * link; 
     char raw_links[] = "raw_links.txt";
     struct Linked_list * parsed_links;
     struct Linked_list * parse_queue;
@@ -48,21 +48,20 @@ int main()
     parsed_links = initialize_linked_list(1);
     parse_queue = initialize_linked_list(1);
 
-    next_hyperlink = starter;
+    link = starter;
     //--------------------------------------------------------------------------
     // STEP 1
     // print to the output file so that we know that we've seen it before
 
-    add_link(parsed_links, remove_extra(next_hyperlink), clean_link(next_hyperlink), 
-        total_hyperlinks++);
+    add_link(parsed_links,link ,total_hyperlinks++);
 
 
-    while(link_under_wget < 3)
+    do
     {
         //----------------------------------------------------------------------------
         //STEP 2 + 3
         // get all the hyperlinks from the starter node and print them to the temporary raw_links file
-        wget_wrapper(next_hyperlink, raw_links);
+        wget_wrapper(link, raw_links);
 
 
         //------------------------------------------------------------------------------
@@ -71,17 +70,23 @@ int main()
 
         //-----------------------------------------------------------------------------
         // STEPS 5,6,7
-        next_hyperlink = get_next_link(parse_queue, parsed_links);
+        link = get_next_link(parse_queue, parsed_links);
         // printf("Current queue:\n");
         // print_linked_list(parse_queue);
         // printf("\n");
         // printf("Parsed links:\n");
         // print_linked_list(parsed_links);
         // printf("\n");
-        link_under_wget++;  
+        link_under_wget++;
 
-        sleep(3);
-    }
+    }while(link_under_wget < 20);
+
+
+
+    printf("Current parsed list:\n");
+    print_linked_list(parsed_links);
+    printf("Current queue:\n");
+    print_linked_list(parse_queue);
 
     delete_linked_list(parse_queue);
     delete_linked_list(parsed_links);
@@ -134,9 +139,13 @@ void add_edge(struct Linked_list * a, int from_index, int to_index)
                 construct_Array(temp->edges);
             }
 
-            (temp->edges).size += 1;
-            (temp->edges).array = (int *)realloc((temp->edges).array, sizeof(int)*((temp->edges).size));
-            ((temp->edges).array)[(temp->edges).size - 1] = to_index;
+            if(search_Array(temp->edges, to_index) == 0)
+            {
+                (temp->edges).size += 1;
+                (temp->edges).array = (int *)realloc((temp->edges).array, sizeof(int)*((temp->edges).size));
+                ((temp->edges).array)[(temp->edges).size - 1] = to_index;
+            }
+            
             break;
         }
 
@@ -144,14 +153,21 @@ void add_edge(struct Linked_list * a, int from_index, int to_index)
     }while(temp != a->root);
 }
 
-void add_link(struct Linked_list * a, char * regular_link, char * filtered_link, int index)
+void add_link(struct Linked_list * a, char * link, int index)
 {
     struct node * temp = (struct node *)malloc(sizeof(struct node));
+    char * new_link = remove_extra(link);
+    // printf("after remove_extra = %s\n", new_link );
+    char * filtered_link = clean_link(link);
 
-    temp->hyperlink =(char *)malloc(strlen(regular_link) * sizeof(char));
-    strcpy(temp->hyperlink, regular_link);
-    temp->filtered_hyperlink = (char *)malloc(strlen(filtered_link) * sizeof(char));
+    temp->hyperlink =(char *)malloc(strlen(new_link) + 1);
+    strcpy(temp->hyperlink, new_link);
+
+    temp->filtered_hyperlink = (char *)malloc(strlen(filtered_link) + 1);
     strcpy(temp->filtered_hyperlink, filtered_link);
+
+    // printf("after copying = %s\n",temp->hyperlink );
+
     temp->data = index;
     construct_Array(temp->edges); 
 
@@ -161,8 +177,7 @@ void add_link(struct Linked_list * a, char * regular_link, char * filtered_link,
 
 void filter_and_store(struct Linked_list * a, char * raw_links)
 {
-    // step 4
-    
+    // step 4  
 
         
     FILE * ifp = fopen(raw_links,"r");
@@ -179,11 +194,14 @@ void filter_and_store(struct Linked_list * a, char * raw_links)
         // for the time being, we use the data field of the node for the index of
         // the link POINTING TO this link. this will be changed when we move this
         // link to the parsed list
-        add_link(a,remove_extra(link_to_filter), clean_link(link_to_filter), link_under_wget);
-        printf("Current queue:\n");
-        print_linked_list(a);
-        printf("\n");
-        sleep(1);
+
+        // printf("unfiltered = %s, filtered = %s\n",link_to_filter, remove_extra(link_to_filter));
+
+        add_link(a,link_to_filter, link_under_wget);
+        // printf("Current queue:\n");
+        // print_linked_list(a);
+        // printf("\n");
+        // sleep(1);
     }; 
 
     fclose(ifp);
@@ -251,8 +269,10 @@ char * remove_extra(char * url)
 
     if (test != NULL)
     {
+        // printf("before = %s\n",url);
         total_size = test-url;
         url[total_size] = '\0';
+        // printf("after = %s\n",url);
     }
 
     return url;

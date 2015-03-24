@@ -56,7 +56,7 @@ void add_node(struct Linked_list * a)
 
 void append_node(struct Linked_list * a, struct node * n)
 {
-    printf("a->size = %d\n",a->size );
+    // printf("a->size = %d\n",a->size );
     // printf("previous link = %s, next link = %s\n",a->root->previous->hyperlink, a->root->next->hyperlink );
     if(a->size == 0)
     {

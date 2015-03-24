@@ -3,6 +3,21 @@
 #include <stdlib.h>
 #include <stddef.h>
 
+int search_Array(struct Array a, int value)
+{
+	int i, result = 0;
+
+	for (i = 0; i < a.size; i++)
+	{
+		if(a.array[i] == value)
+		{
+			result = 1;
+			break;
+		}
+	}
+
+	return result;
+}
 
 void print_2DArray(struct TwoDArray * a)
 {
