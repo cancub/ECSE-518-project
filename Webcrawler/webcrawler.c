@@ -24,78 +24,67 @@ void wget_wrapper(char * website, char * outputfile);
 void crawl_page(char * inputfile, char * newinputfile, char * parsed_links, char * raw_links);
 char * remove_extra(char * url);
 char * append_directory(char * filename);
-void filter_and_store(char * raw_links, char * output);
-char * get_next_link(char * from_file, char ** output_pointer, char * parsed);
+void filter_and_store(struct Linked_list * a, char * raw_links);
+char * get_next_link(struct Linked_list * queue, struct Linked_list * parsed);
 void add_edge(struct Linked_list * a, int from_index, int to_index);
 void add_link(struct Linked_list * a, char * hyperlink, char * filtered_hyperlink, int index);
+char * clean_link(char * url);
+int search_for_link(struct Linked_list * a, char * url);
 // void remove_file(char * to_remove);
 
 int total_hyperlinks = 1;
 int link_under_wget = 1;
-int switcher = 0;
-struct Linked_list parsed_links;
-struct Linked_list parse_queue;
 
 int main()
 {
     char * next_hyperlink; 
-    int i = 0;
-    char cwd[1024];
+    char raw_links[] = "raw_links.txt";
+    struct Linked_list * parsed_links;
+    struct Linked_list * parse_queue;
 
-    char ** input_files = (char **)malloc(2*sizeof(char *));
-    char filename1[20] = "input1.txt";
-    char filename2[20] = "input2.txt";
-    char raw_links[20] = "raw_links.txt";
-    char parsed_links[20] = "parsed.txt";
-    char filtered_links[20] = "rx_queue.txt";
-    input_files[0] = filename1;
-    input_files[1] = filename2; 
-    
-    // get the graph starteds
-    construct_2DArray(&graph);
-
-    // clear all the files that will be used
-    i = remove(append_directory(input_files[0]));
-    i = remove(append_directory(input_files[1]));
-    i = remove(append_directory(raw_links));
-    i = remove(append_directory(parsed_links));
-    i = remove(append_directory(filtered_links));
-    
-    
-    char output[200];   // holds the most recently obtained hyperlink
     char starter[] = "http://www.mcgill.ca";    // the starting node
 
+    //initialize linked lists
+    parsed_links = initialize_linked_list(1);
+    parse_queue = initialize_linked_list(1);
+
+    next_hyperlink = starter;
     //--------------------------------------------------------------------------
     // STEP 1
-
-    //open the output file
-    FILE * ofp = fopen(parsed_links,"w");
-
     // print to the output file so that we know that we've seen it before
-    fprintf(ofp, "%s %s %d\n",add_slash(remove_extra(flip_url(starter))),remove_extra(starter),link_under_wget);
+
+    add_link(parsed_links, remove_extra(next_hyperlink), clean_link(next_hyperlink), 
+        total_hyperlinks++);
 
 
-    //----------------------------------------------------------------------------
-    //STEP 2 + 3
-    // get all the hyperlinks from the starter node and print them to the temporary raw_links file
-    wget_wrapper(starter, append_directory(raw_links));
+    while(link_under_wget < 3)
+    {
+        //----------------------------------------------------------------------------
+        //STEP 2 + 3
+        // get all the hyperlinks from the starter node and print them to the temporary raw_links file
+        wget_wrapper(next_hyperlink, raw_links);
 
-    //------------------------------------------------------------------------------
-    // STEP 4
-    filter_and_store(append_directory(raw_links), append_directory(filtered_links));
 
-    //-----------------------------------------------------------------------------
-    // STEPS 5,6,7
-    next_hyperlink = get_next_link(append_directory(filtered_links),input_files, append_directory(parsed_links));
-    link_under_wget++;
+        //------------------------------------------------------------------------------
+        // STEP 4
+        filter_and_store(parse_queue, raw_links);
 
-    //---------------------------------------------------------------------------
-    // STEP 8
-    fprintf(ofp, "%s %s %d\n", add_slash(remove_extra(flip_url(next_hyperlink))),
-        remove_extra(next_hyperlink),link_under_wget);    
+        //-----------------------------------------------------------------------------
+        // STEPS 5,6,7
+        next_hyperlink = get_next_link(parse_queue, parsed_links);
+        // printf("Current queue:\n");
+        // print_linked_list(parse_queue);
+        // printf("\n");
+        // printf("Parsed links:\n");
+        // print_linked_list(parsed_links);
+        // printf("\n");
+        link_under_wget++;  
 
-    // STEP 9
-    switcher = abs(1-switcher);
+        sleep(3);
+    }
+
+    delete_linked_list(parse_queue);
+    delete_linked_list(parsed_links);
 
     return 0;
 
@@ -103,17 +92,33 @@ int main()
 
 
 
-// void remove_file(char * to_remove)
-// {
+//
+//functions
 
-//     char * command = (char *)malloc(sizeof(char)*(5 + strlen(to_remove)));
-//     strcat(command,"rm ");
-//     printf("command = %s\n", command);    
-//     strncpy(command + sizeof(char)*3, to_remove, strlen(to_remove));
-//     printf("command = %s\n", command);
-//     system(command);
-//     free(command);
-// }
+int search_for_link(struct Linked_list * a, char * url)
+{
+    struct node * test;
+    test = a->root;
+
+    do
+    {   
+        if ((strcmp(test->hyperlink, url) == 0) && (test->data != 0))
+        {
+            return test->data;
+        }
+
+        to_next(test);
+    }while(test != a->root);
+
+    return 0;
+}
+
+char * clean_link(char * url)
+{
+    return add_slash(remove_extra(flip_url(url)));
+}
+
+
 void add_edge(struct Linked_list * a, int from_index, int to_index)
 {
     struct node * temp = a->root;
@@ -123,14 +128,14 @@ void add_edge(struct Linked_list * a, int from_index, int to_index)
     {
         if(temp->data == from_index)
         {
-            if ((temp->edges)->size == 0)
+            if ((temp->edges).size == 0)
             {
                 construct_Array(temp->edges);
             }
 
-            (temp->edges)->size += 1;
-            (temp->edges)->array = (int *)realloc((temp->edges)->array, sizeof(int)*((temp->edges)->size));
-            ((temp->edges)->array)[(temp->edges)->size - 1] = to_index;
+            (temp->edges).size += 1;
+            (temp->edges).array = (int *)realloc((temp->edges).array, sizeof(int)*((temp->edges).size));
+            ((temp->edges).array)[(temp->edges).size - 1] = to_index;
             break;
         }
 
@@ -140,106 +145,81 @@ void add_edge(struct Linked_list * a, int from_index, int to_index)
 
 void add_link(struct Linked_list * a, char * hyperlink, char * filtered_hyperlink, int index)
 {
-    add_node(a);
-    ((a->root)->previous)->hyperlink = hyperlink;
-    ((a->root)->previous)->filtered_hyperlink = filtered_hyperlink;
-    ((a->root)->previous)->data = index;
+    struct node * temp = (struct node *)malloc(sizeof(struct node));
+
+    temp->hyperlink = hyperlink;
+    temp->filtered_hyperlink = filtered_hyperlink;
+    temp->data = index;
+    construct_Array(temp->edges); 
+
+    append_node(a,temp);
 }
 
 
-void filter_and_store(char * raw_links, char * output)
+void filter_and_store(struct Linked_list * a, char * raw_links)
 {
     // step 4
     
 
+        
     FILE * ifp = fopen(raw_links,"r");
-    printf("here\n");
-    FILE * ofp = fopen(output,"a");
-    char * link_to_filter;
+    char link_to_filter[200];
 
+    if(ifp == NULL)
+    {
+        printf("Could not open %s for writing\n", raw_links);
+        exit(0);
+    }
 
     while(fscanf(ifp,"%s", link_to_filter) == 1)
     {
-        fprintf(ofp, "%s %s %d\n", add_slash(flip_url(remove_extra(link_to_filter))), 
-            remove_extra(link_to_filter), link_under_wget);
+        // for the time being, we use the data field of the node for the index of
+        // the link POINTING TO this link. this will be changed when we move this
+        // link to the parsed list
+        add_link(a,remove_extra(link_to_filter), clean_link(link_to_filter), link_under_wget);
+        printf("Current queue:\n");
+        print_linked_list(a);
+        printf("\n");
+        sleep(1);
     }; 
 
     fclose(ifp);
-    fclose(ofp);
 }
 
-char * get_next_link(char * from_file, char ** output_pointer, char * parsed)
+char * get_next_link(struct Linked_list * queue, struct Linked_list * parsed)
 {   
 
     // step 5, 6, and 7
+    struct node * parsed_test;
+    int found;
 
-    char * next_link;
-    char * completely_filtered, * link;
-    char * test, * dummy; 
-    int anchor_index, dummy_anchor_index, possible_index, found, next_link_found = 0;
-    FILE * ifp = fopen(from_file,"r");
-    FILE * ofp = fopen(append_directory(output_pointer[switcher]),"a");
-    FILE * checker = fopen(append_directory(output_pointer[1-switcher]),"r");
-    FILE * parsed_links = fopen(append_directory(parsed),"r");
+    do
+    {   
+        // remove the first link in the queue for testing
+        parsed_test = pop_node(queue, 0);
 
-    //get the next link in the input file (the filtered links)
-    while(fscanf(ifp,"%s %s %d\n",completely_filtered,link,&anchor_index) == 3)
-    {
-        found = 0;  // test variable to see if we've found a match in the previous
-        while(fscanf(checker,"%s %s %d %d\n", test,dummy,&dummy_anchor_index,&possible_index) == 4)
+        found = search_for_link(parsed, parsed_test->hyperlink);
+
+        if (found != 0)
         {
-            //search through the other file of the links that resulted from the previous
-            // wgets to see if this link already exists in that file and then give it that number
-            if(strcmp(test,completely_filtered) == 0)
-            {   
-                fprintf(ofp, "%s %s %d %d\n", completely_filtered,link,anchor_index,possible_index);
-                found = 1;
-                break;
-            }
-        };
-
-        // if we haven't found the link in the other file that we're switching back and forth from
-        // it might exists in the parsed file of links that have already been crawled
-        // remember that the format for this file is (completely filtered, extra removed, this page's index)
-        while((found == 0) && (fscanf(parsed_links,"%s %s %d", test, dummy, &possible_index) == 3))
-        {
-           if(strcmp(test,completely_filtered) == 0)
-            {   
-                fprintf(ofp, "%s %s %d %d\n", completely_filtered,link,anchor_index,possible_index);
-                found = 1;
-                break;
-            } 
-        };
-
-        // if after all that checking we have yet to find a matching link, we have a new link
-        // and we supply it with a new index number. Additionally, if this is the first new
-        // link that we've found then this is next link that we want to crawl
-        if (found == 0)
-        {
-            total_hyperlinks++;
-            possible_index = total_hyperlinks;
-            fprintf(ofp, "%s %s %d %d\n", completely_filtered,link,anchor_index,possible_index);
-
-            if(next_link_found == 0)
-            {
-                next_link = link;
-                next_link_found == 1;
-            }
+            // if we can locate this link amongst those that have already been parsed
+            // then we do nothing but add this edge to the link that pointed to this link
+            add_edge(parsed,parsed_test->data,found);
         }
+        else
+        {
+            // otherwise, we know that search_for_link will return a 0 if the link we are
+            // looking at has yet to be parsed. thus, we have found a new link and we should
+            // assign to it a new index. Additionally, we still want to add the edge
+            add_edge(parsed,parsed_test->data, total_hyperlinks);
+            parsed_test->data = total_hyperlinks++;
+            append_node(parsed,parsed_test);
 
-        // move back to the top of the checker file to test again with the next link
-        rewind(checker);
+            return parsed_test->hyperlink;
+        }
+    }while(parsed_test != queue->root);
 
-        // add the edge between the anchor link and each link pointed to by the anchor
-        add_edge(anchor_index,possible_index);
-    };
-
-    fclose(ifp);
-    fclose(ofp);
-    fclose(checker);
-    fclose(parsed_links);
-
-    return next_link;
+    return "error";
 }
 
 
@@ -261,7 +241,6 @@ char * append_directory(char * filename)
 char * remove_extra(char * url)
 {
     char * test = url;
-    char * result;
     int total_size;
 
     test = strchr(url,'?');
@@ -278,7 +257,6 @@ char * remove_extra(char * url)
 
 void wget_wrapper(char * website, char * outputfile)
 {
-    char * link_to_filter;
 
     // this is the template for the wget, we replace the x with the url we want to
     // crawl and the y at the very end with the location of the file we are dumping the
@@ -311,85 +289,10 @@ sed -e 's/^.*\"\\([^\"]\\+\\)\".*$/\\1/g' > y";
     strcpy(final_wget + length*sizeof(char), after_file);
 
     // call the wget
+    printf("%s\n",final_wget );
     system(final_wget);
 
 }
-
-
-
-// void crawl_page(char * inputfile, char * newinputfile, char * parsed_links, char * raw_links)
-// {
-
-//     int i;
-//     char * flipped, start[200];
-//     int exists = 0;
-    
-
-//     FILE * ifp = fopen(inputfile,"r"); //where we will retreive the next hyperlink to be scoured
-//     FILE * ofp = fopen(newinputfile,"w"); //where we will store the remainder of the hyperlinks in the file
-//     FILE * parsed = fopen(parsed_links,"r");
-
-//     char * output;  //this will hold the first hyperlink in the inputfile
-//     char dummy[200], test[200];
-
-//     //get the first hyperlink
-//     fscanf(ifp,"%s", start);
-//     // printf("start = %s, length = %d\n", start, (int)(strlen(start)) );
-//     output = (char *)malloc(sizeof(char)*strlen(start));
-//     output = remove_extra(start);
-
-//     // printf("output = %s\n", output );
-
-//     output[strlen(start)] = '\0';
-//     // printf("output before flipped = %s...TEST\n", output );
-
-//     //get the link as how it would appear in the final file
-//     flipped = flip_url(output);
-//     // printf("output after flipped = %s...TEST\n", output );
-//     flipped = add_slash(flipped);
-
-//     //store the remainder of the hyperlinks in the new input file;
-//     while(fscanf(ifp,"%s",test) == 1)
-//     {
-//         // printf("output = %s\n",output );
-//         fprintf(ofp, "%s\n", test);
-
-//     };
-
-//     fclose(ifp);
-//     fclose(ofp);
-
-//     // use the parsed_links, which contains a list of already-crawled pages, as an input
-//     ifp = fopen(parsed_links,"r");
-
-//     // search through the output file to determine if the link has already been used before
-//     while(fscanf(ifp,"%s %s %d", test,dummy, &i) == 3)
-//     {   
-//         if (strcmp(flipped,test) == 0)
-//         {
-//             exists = 1;
-//         }
-//     };
-
-
-
-//     // if it hasn't been used before, append it to the list
-//     if (exists == 0)
-//     {
-//         ofp = fopen(outputfile,"a");
-
-//         fprintf(ofp, "%s %s %d\n", flipped, output, total_hyperlinks++);
-
-//         fclose(ofp);
-
-        
-
-//         // add all the links we see while going through this link
-//         wget_wrapper(output,newinputfile);
-
-//     }
-
-// }
 
 char * add_slash(char * url)
 {
@@ -425,8 +328,8 @@ char * flip_url(char * url)
 
     int length = strlen(url);
 
-    char * host, * top_level_domain, * end_of_string, * middle, * filepath, * result, * hostname;   
-    int tld_size, last_letter_of_host, i, middle_size, hostname_size;
+    char * host, * top_level_domain, * end_of_string, * middle, * filepath, * result;   
+    int tld_size, middle_size, hostname_size;
 
     char * test = url;
 

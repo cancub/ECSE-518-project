@@ -1,5 +1,5 @@
-all: PageRank.c
-	gcc -g -Wall -o pagerank PageRank.c dubarrays.c dubvmalg.c twodarrays.c -lm -lcblas
+all: webcrawler.c
+	gcc -g -Wall -o webcrawler webcrawler.c linked_list.c twodarrays.c
 
 clean:
-	$(RM) myprog
+	$(RM) webcrawler

@@ -5,7 +5,15 @@
 #include <unistd.h>
 
 
+void to_next(struct node * n)
+{
+    n = n->next;
+}
 
+void to_prev(struct node * n)
+{
+    n = n->previous;
+}
 
 void copy_and_append(struct Linked_list * from, struct Linked_list * to)
 {
@@ -44,6 +52,30 @@ void add_node(struct Linked_list * a)
     ((a->root)->previous)->next = new_node;
     (a->root)->previous = new_node;
     a->size += 1;
+}
+
+void append_node(struct Linked_list * a, struct node * n)
+{
+    printf("a->size = %d\n",a->size );
+    // printf("previous link = %s, next link = %s\n",a->root->previous->hyperlink, a->root->next->hyperlink );
+    if(a->size == 0)
+    {
+        free(a->root);
+        a->root = n;
+        n->previous = n;
+        n->next = n;
+        a->size += 1;
+    }
+    else
+    {        
+        n->previous = (a->root)->previous;
+        n->next = a->root;
+        ((a->root)->previous)->next = n;
+        (a->root)->previous = n;
+        a->size += 1;
+    }
+    // printf("previous link = %s, next link = %s\n",a->root->previous->hyperlink, a->root->next->hyperlink );
+
 }
 
 void add_node_location_data(struct Linked_list* a, int location, int value)
@@ -99,7 +131,7 @@ struct Linked_list * initialize_linked_list(int size)
     struct Linked_list * a = (struct Linked_list *)malloc(sizeof(struct Linked_list));
     int i;
 
-    a->size = 1;
+    a->size = 0;
 
     a->root = (struct node*)malloc(sizeof(struct node));
 
@@ -143,6 +175,23 @@ struct node * get_node_at_index(struct Linked_list * a,int index)
         // printf("i = %d, index = %d\n",i, index );
         temp = temp->next;
     }
+
+    return temp;
+}
+
+struct node * pop_node(struct Linked_list * a, int index)
+{
+    struct node * temp = get_node_at_index(a,index);
+
+    if (index == 0)
+    {
+        a->root = (a->root)->next;
+    }
+
+    (temp->previous)->next = temp->next;
+    (temp->next)->previous = temp->previous;
+    temp->next = NULL;
+    temp->previous = NULL;
 
     return temp;
 }
@@ -229,21 +278,6 @@ void delete_linked_list(struct Linked_list * a)
     }
 
     free(a->root);
-
-    // if(temp == temp->next)
-    // {
-    //  printf("here1\n");
-    //  free(a->root);
-    // }
-    // else
-    // {
-    //  printf("here2\n");
-    //  a->root = temp->next;
-    //  (temp->previous)->next = temp->next;
-    //  (temp->next)->previous = temp->previous;
-    //  free(temp);
-    //  delete_linked_list(a);
-    // }
 }
 
 void print_linked_list(struct Linked_list * a)
@@ -256,7 +290,8 @@ void print_linked_list(struct Linked_list * a)
 
     do
     {
-        printf("node number %d data = %d\n", i++,temp->data );
+
+        printf("node number %d data = %d, link_location = %d\n", i++,temp->data, (int)(&(temp->hyperlink)) );
         temp = temp->next;
     }while(temp != a->root);
 }

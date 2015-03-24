@@ -26,6 +26,12 @@ void construct_2DArray(struct TwoDArray * a)
 	(a->array[0]).size = 0;
 }
 
+void construct_Array(struct Array a)
+{
+	a.size = 0;
+	a.array = (int *)malloc(sizeof(int));
+}
+
 void add_array(struct TwoDArray * a)
 {
 

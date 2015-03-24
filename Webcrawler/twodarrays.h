@@ -18,7 +18,7 @@ struct TwoDArray
 void add_array(struct TwoDArray * a);
 void add_element(struct TwoDArray * a, int n, int value);
 void construct_2DArray(struct TwoDArray * a);
-void construct_Array(struct Array * a);
+void construct_Array(struct Array a);
 void print_2DArray(struct TwoDArray * a);
 
 #endif

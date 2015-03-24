@@ -38,8 +38,11 @@ int get_min(int a, int b);
 void copy_linked_list(struct Linked_list * a, struct Linked_list * b);
 void remove_node(struct Linked_list * a, struct node * to_remove);
 int search_for_num(struct Linked_list * a, int value);
-
+struct node * pop_node(struct Linked_list * a, int index);
+void append_node(struct Linked_list * a, struct node * n);
 void add_node_location_data(struct Linked_list* a, int location, int value);
 void copy_and_append(struct Linked_list * from, struct Linked_list * to);
+void to_next(struct node * n);
+void to_prev(struct node * n);
 
 #endif
