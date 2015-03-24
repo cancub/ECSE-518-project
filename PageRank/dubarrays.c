@@ -27,6 +27,25 @@ void print_DubMatrix(struct DubArray * a, int row_length)
 	printf("\n");
 }
 
+int compare_DubArrays(struct DubArray * a, struct DubArray * b)
+{
+	//return 1 if they are equal, 0 if they are not;
+	int i,result = 1;
+	if(a->size == b->size)
+	{
+		for(i = 0; i < a->size; i++)
+		{
+			if(a->array[i] != b->array[i])
+			{
+				result = 0;
+				break;
+			}
+		}
+	}
+
+	return result;
+}
+
 void print_DubArray(struct DubArray * a)
 {
 	int i;
@@ -38,7 +57,7 @@ void print_DubArray(struct DubArray * a)
 		}
 		else
 		{
-			printf("%8.2f",a->array[i]);
+			printf("%8.4f",a->array[i]);
 		}
 
 	}

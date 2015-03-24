@@ -29,7 +29,7 @@ char * get_next_link(struct Linked_list * queue, struct Linked_list * parsed);
 void add_edge(struct Linked_list * a, int from_index, int to_index);
 void add_link(struct Linked_list * a, char * hyperlink, char * filtered_hyperlink, int index);
 char * clean_link(char * url);
-int search_for_link(struct Linked_list * a, char * url);
+int search_for_link(struct Linked_list * a, struct node * n);
 // void remove_file(char * to_remove);
 
 int total_hyperlinks = 1;
@@ -95,14 +95,15 @@ int main()
 //
 //functions
 
-int search_for_link(struct Linked_list * a, char * url)
+int search_for_link(struct Linked_list * a, struct node * n)
 {
     struct node * test;
     test = a->root;
 
     do
     {   
-        if ((strcmp(test->hyperlink, url) == 0) && (test->data != 0))
+        if ((strcmp(test->filtered_hyperlink, n->filtered_hyperlink) == 0) 
+            && (test->data != 0))
         {
             return test->data;
         }
@@ -143,12 +144,14 @@ void add_edge(struct Linked_list * a, int from_index, int to_index)
     }while(temp != a->root);
 }
 
-void add_link(struct Linked_list * a, char * hyperlink, char * filtered_hyperlink, int index)
+void add_link(struct Linked_list * a, char * regular_link, char * filtered_link, int index)
 {
     struct node * temp = (struct node *)malloc(sizeof(struct node));
 
-    temp->hyperlink = hyperlink;
-    temp->filtered_hyperlink = filtered_hyperlink;
+    temp->hyperlink =(char *)malloc(strlen(regular_link) * sizeof(char));
+    strcpy(temp->hyperlink, regular_link);
+    temp->filtered_hyperlink = (char *)malloc(strlen(filtered_link) * sizeof(char));
+    strcpy(temp->filtered_hyperlink, filtered_link);
     temp->data = index;
     construct_Array(temp->edges); 
 
@@ -198,7 +201,7 @@ char * get_next_link(struct Linked_list * queue, struct Linked_list * parsed)
         // remove the first link in the queue for testing
         parsed_test = pop_node(queue, 0);
 
-        found = search_for_link(parsed, parsed_test->hyperlink);
+        found = search_for_link(parsed, parsed_test);
 
         if (found != 0)
         {

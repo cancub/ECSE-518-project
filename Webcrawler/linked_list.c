@@ -291,7 +291,7 @@ void print_linked_list(struct Linked_list * a)
     do
     {
 
-        printf("node number %d data = %d, link_location = %d\n", i++,temp->data, (int)(&(temp->hyperlink)) );
+        printf("node number %d data = %d, link = %s\n", i++,temp->data, (temp->hyperlink));
         temp = temp->next;
     }while(temp != a->root);
 }
