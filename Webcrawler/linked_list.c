@@ -346,6 +346,7 @@ int get_min(int a, int b) {
 void concatenate_lists(struct Linked_list * a, struct Linked_list * b)
 {
 
+    int new_size = a->size + b->size;
     struct node * a_last = a->root->previous;
     struct node * b_last = b->root->previous;
 
@@ -354,8 +355,10 @@ void concatenate_lists(struct Linked_list * a, struct Linked_list * b)
     b->root->previous = a_last;
     b_last->next = a->root;
 
-    // free(b->root);
-    // free(b);
+    a->size = new_size;
+
+    free(b->root);
+    free(b);
 
     // print_linked_list(a);
 }
