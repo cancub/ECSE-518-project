@@ -42,7 +42,8 @@ struct node * pop_node(struct Linked_list * a, int index);
 void append_node(struct Linked_list * a, struct node * n);
 void add_node_location_data(struct Linked_list* a, int location, int value);
 void copy_and_append(struct Linked_list * from, struct Linked_list * to);
-void to_next(struct node * n);
-void to_prev(struct node * n);
+void to_next(struct node ** n);
+void to_prev(struct node ** n);
+void concatenate_lists(struct Linked_list * a, struct Linked_list * b);
 
 #endif

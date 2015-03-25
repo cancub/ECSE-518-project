@@ -33,6 +33,17 @@ void print_2DArray(struct TwoDArray * a)
 	}
 }
 
+void print_Array(struct Array a)
+{
+	int i;
+
+	for(i = 0; i < a.size; i++)
+	{
+		printf("%3d",a.array[i] );
+	}
+	// printf("\n");
+}
+
 void construct_2DArray(struct TwoDArray * a)
 {
 	a->size = 1;
@@ -41,10 +52,11 @@ void construct_2DArray(struct TwoDArray * a)
 	(a->array[0]).size = 0;
 }
 
-void construct_Array(struct Array a)
+void construct_Array(struct Array * a)
 {
-	a.size = 0;
-	a.array = (int *)malloc(sizeof(int));
+	a->size = 0;
+	a->array = (int *)malloc(sizeof(int));
+	a->array[0] = -1;
 }
 
 void add_array(struct TwoDArray * a)
@@ -63,7 +75,7 @@ void add_array(struct TwoDArray * a)
 	}
 }
 
-void add_element(struct TwoDArray * a, int n, int value)
+void add_2Delement(struct TwoDArray * a, int n, int value)
 {
 	// printf("a->array[n = %d]).size = %d\n", n, (int)((a->array[n]).size));
 
@@ -80,4 +92,16 @@ void add_element(struct TwoDArray * a, int n, int value)
 	}
 
 	// printf("a->array[n = %d].size = %d, value = %d\n",n,(int)((a->array[n]).size),value );
+}
+
+void add_element(struct Array * a, int value)
+{
+
+	if (a->size > 0)
+	{
+		a->array = (int *)realloc(a->array, (sizeof(int))*(a->size +1));
+	}
+
+	a->array[a->size] = value;
+	a->size += 1;
 }

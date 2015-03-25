@@ -32,8 +32,8 @@ char * clean_link(char * url);
 int search_for_link(struct Linked_list * a, struct node * n);
 // void remove_file(char * to_remove);
 
-int total_hyperlinks = 1;
-int link_under_wget = 1;
+int total_parsed_hyperlinks = 1;
+int index_under_wget = 1;
 
 int main()
 {
@@ -53,8 +53,7 @@ int main()
     // STEP 1
     // print to the output file so that we know that we've seen it before
 
-    add_link(parsed_links,link ,total_hyperlinks++);
-
+    add_link(parsed_links,link ,total_parsed_hyperlinks++);
 
     do
     {
@@ -66,10 +65,14 @@ int main()
 
         //------------------------------------------------------------------------------
         // STEP 4
+        // parse the newest links to see if there are any duplicates, and 
+        // format the links in two ways such that they can be easily used AND compared.
+        // finally, add an index to the link to show which page linked to it.
         filter_and_store(parse_queue, raw_links);
 
         //-----------------------------------------------------------------------------
         // STEPS 5,6,7
+        // 
         link = get_next_link(parse_queue, parsed_links);
         // printf("Current queue:\n");
         // print_linked_list(parse_queue);
@@ -77,14 +80,17 @@ int main()
         // printf("Parsed links:\n");
         // print_linked_list(parsed_links);
         // printf("\n");
-        link_under_wget++;
+        index_under_wget++;
 
-    }while(link_under_wget < 1);
+        printf("index under wget = %d\n",index_under_wget );
+
+    }while(index_under_wget < 35);
 
 
 
     printf("Current parsed list:\n");
     print_linked_list(parsed_links);
+    printf("\n");
     printf("Current queue:\n");
     print_linked_list(parse_queue);
 
@@ -106,24 +112,50 @@ int search_for_link(struct Linked_list * a, struct node * n)
     struct node * test;
     test = a->root;
 
-    printf("a->size = %d\n", a->size);
+    // printf("testing = %s\n", n->filtered_hyperlink);
+
+    // print_linked_list(a);
 
     if (a->size > 0)
     {
-        do
-        {   
-            printf("%s, %s\n", test->filtered_hyperlink, n->filtered_hyperlink);
-            if ((strcmp(test->filtered_hyperlink, n->filtered_hyperlink) == 0) 
-                && (test->data != 0))
-            {
-                printf("*************here for link %s\n",n->hyperlink );
-                return test->data;
-            }
+        // cycle through each of the links in the linked list to compare with this
+        // potential node n.
 
-            to_next(test);
-            printf("test == a->root? %d\n",test == a->root);
+        if (index_under_wget > 1)
+        {
+            // printf("%s\n", n->filtered_hyperlink);
+        }
+        do  
+        {              
+
+            // if the test link is the same as that of n, we need to go further, partly
+            // for differentiation of whether this operation is being performed
+            // for the parsed links list or the queue.
+
+            if ( strcmp(test->filtered_hyperlink,n->filtered_hyperlink) == 0)
+            {
+
+                // printf("*************found %s\n",n->hyperlink );
+
+                // send back the index of the link that matched n's. from this,
+                // any calling function for the parsing queue will be able to cpompare to
+                // the current index of the link under wget and see if they match.
+                // on the other hand, when attmepting to add this link to the parsed list
+                // literally any value other than being returned will give calling function
+                // reason to not add the link
+
+                // sleep(3);
+
+                return test->data;
+
+                // }
+            }
+            to_prev(&test);
+            // printf("test == a->root? %d\n",test == a->root);
         }while(test != a->root);
     }
+
+    // printf("\n");
 
     return 0;
 }
@@ -136,24 +168,19 @@ char * clean_link(char * url)
 
 void add_edge(struct Linked_list * a, int from_index, int to_index)
 {
-    struct node * temp = a->root;
 
+    // this function is called when an edge is being added to one of the
+    // links that exists in the parsed linked list
+    struct node * temp = a->root;
 
     do
     {
         if(temp->data == from_index)
         {
-            if ((temp->edges).size == 0)
-            {
-                construct_Array(temp->edges);
-            }
 
             if(search_Array(temp->edges, to_index) == 0)
             {
-                (temp->edges).size += 1;
-                (temp->edges).array = (int *)realloc((temp->edges).array, 
-                    sizeof(int)*((temp->edges).size));
-                ((temp->edges).array)[(temp->edges).size - 1] = to_index;
+                add_element(&(temp->edges),to_index);                
             }
             
             break;
@@ -161,28 +188,42 @@ void add_edge(struct Linked_list * a, int from_index, int to_index)
 
         temp = temp->next;
     }while(temp != a->root);
+
+    // printf("printing edges of %d, whose array has size %d\n",temp->data, (int)(temp->edges.size));
+    // print_Array(temp->edges);
 }
 
 void add_link(struct Linked_list * a, char * link, int index)
 {
+
+    // as the inbound links from wget are being filtered, a link will be added
+    // to the crawling queue if it does not already exist there for the same
+    // reference page. If this is not the case, then it is added with its data
+    // element representing the index of the page that is linking to it.
+
+
+    // filter and copy the input information (linking page index, wget-able hyperlink
+    // and a fitlered hpyerlink for sorting) into a new node
+
     struct node * temp = (struct node *)malloc(sizeof(struct node));
     char * new_link = remove_extra(link);
-    // printf("after remove_extra = %s\n", new_link );
     char * filtered_link = clean_link(link);
 
     temp->hyperlink =(char *)malloc(strlen(new_link) + 1);
     strcpy(temp->hyperlink, new_link);
-
     temp->filtered_hyperlink = (char *)malloc(strlen(filtered_link) + 1);
     strcpy(temp->filtered_hyperlink, filtered_link);
 
-    // printf("after copying = %s\n",temp->hyperlink );
-
     temp->data = index;
-    construct_Array(temp->edges);
+    construct_Array(&(temp->edges));
 
-    printf("index = %d, link_under_wget = %d\n", index, link_under_wget);
-    if(index != link_under_wget || (search_for_link(a,temp) == 0))
+    // sleep(1);
+
+    // printf("index = %d, index_under_wget = %d\n", index, index_under_wget);
+
+    // if the link does not already exist for the same linking page, add it to
+    // the list
+    if(search_for_link(a,temp) != index_under_wget)
     {
         append_node(a,temp);
     }
@@ -192,7 +233,21 @@ void add_link(struct Linked_list * a, char * link, int index)
 void filter_and_store(struct Linked_list * a, char * raw_links)
 {
     // step 4  
+    // we create a new linked list to hold the new links, add the links to this
+    // new list while rejecting duplicates for this list and this list alone
+    // and then append this listto the end of a
 
+    struct Linked_list * temp;
+    int start_size = a->size;
+
+    if(start_size != 0)
+    {
+        temp = initialize_linked_list(1);
+    }
+    else
+    {
+        temp = a;
+    }
         
     FILE * ifp = fopen(raw_links,"r");
     char link_to_filter[200];
@@ -210,7 +265,7 @@ void filter_and_store(struct Linked_list * a, char * raw_links)
         // link to the parsed list
 
         // printf("unfiltered = %s, filtered = %s\n",link_to_filter, remove_extra(link_to_filter));
-        add_link(a,link_to_filter, link_under_wget);
+        add_link(temp,link_to_filter, index_under_wget);
         // printf("Current queue:\n");
         // print_linked_list(a);
         // printf("\n");
@@ -218,6 +273,17 @@ void filter_and_store(struct Linked_list * a, char * raw_links)
     }; 
 
     fclose(ifp);
+
+
+    // printf("\nprinting old queue of size %d prior to new adittions\n", (int)(a->size));
+    // print_linked_list(a);
+    // printf("\nprinting new additions of size %d prior to concat\n", (int)(temp->size));
+    // print_linked_list(temp);
+
+    if(start_size != 0)
+    {
+        concatenate_lists(a,temp);
+    }
 }
 
 char * get_next_link(struct Linked_list * queue, struct Linked_list * parsed)
@@ -232,7 +298,10 @@ char * get_next_link(struct Linked_list * queue, struct Linked_list * parsed)
         // remove the first link in the queue for testing
         parsed_test = pop_node(queue, 0);
 
+        // printf("searching for %s\n",parsed_test->filtered_hyperlink );
         found = search_for_link(parsed, parsed_test);
+        // printf("found = %d\n",found);
+        // printf("\n");
 
         if (found != 0)
         {
@@ -245,12 +314,18 @@ char * get_next_link(struct Linked_list * queue, struct Linked_list * parsed)
             // otherwise, we know that search_for_link will return a 0 if the link we are
             // looking at has yet to be parsed. thus, we have found a new link and we should
             // assign to it a new index. Additionally, we still want to add the edge
-            add_edge(parsed,parsed_test->data, total_hyperlinks);
-            parsed_test->data = total_hyperlinks++;
+
+            // add edge to the pre-existing node (it has already been added or else
+            // we wouldn't be looking at a page it links to)
+            add_edge(parsed,parsed_test->data, total_parsed_hyperlinks);
+            // assign an index to this page and inciment the number of links
+            parsed_test->data = total_parsed_hyperlinks++;
+            // add this page to the parsed list
             append_node(parsed,parsed_test);
 
             return parsed_test->hyperlink;
         }
+
     }while(parsed_test != queue->root);
 
     return "error";

@@ -5,14 +5,14 @@
 #include <unistd.h>
 
 
-void to_next(struct node * n)
+void to_next(struct node ** n)
 {
-    n = n->next;
+    *n = (*n)->next;
 }
 
-void to_prev(struct node * n)
+void to_prev(struct node ** n)
 {
-    n = n->previous;
+    *n = (*n)->previous;
 }
 
 void copy_and_append(struct Linked_list * from, struct Linked_list * to)
@@ -138,7 +138,7 @@ struct Linked_list * initialize_linked_list(int size)
     a->root->next = a->root;
     a->root->previous = a->root;
 
-    ((a->root)->edges).size == 0;
+    // ((a->root)->edges).size == 0;
 
     for(i = 1; i < size; i++)
     {   
@@ -284,7 +284,6 @@ void delete_linked_list(struct Linked_list * a)
 
 void print_linked_list(struct Linked_list * a)
 {
-    int i = 0;
 
     struct node * temp;
 
@@ -293,8 +292,17 @@ void print_linked_list(struct Linked_list * a)
     do
     {
 
-        printf("node number %d data = %d, link = %s\n", i++,temp->data, (temp->hyperlink));
-        temp = temp->next;
+        printf("from_index/index = %d, link = %s",
+            temp->data, (temp->hyperlink));
+
+        if ((int)((temp->edges).size) > 0)
+        {
+            printf(", edges = ");
+            print_Array(temp->edges);
+        }
+        printf("\n");
+
+        to_next(&temp);
     }while(temp != a->root);
 }
 
@@ -335,3 +343,19 @@ int get_min(int a, int b) {
 }
 
 
+void concatenate_lists(struct Linked_list * a, struct Linked_list * b)
+{
+
+    struct node * a_last = a->root->previous;
+    struct node * b_last = b->root->previous;
+
+    a->root->previous = b_last;
+    a_last->next = b->root;
+    b->root->previous = a_last;
+    b_last->next = a->root;
+
+    // free(b->root);
+    // free(b);
+
+    // print_linked_list(a);
+}

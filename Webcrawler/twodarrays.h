@@ -16,10 +16,12 @@ struct TwoDArray
 };
 
 void add_array(struct TwoDArray * a);
-void add_element(struct TwoDArray * a, int n, int value);
+void add_2Delement(struct TwoDArray * a, int n, int value);
+void add_element(struct Array * a, int value);
 void construct_2DArray(struct TwoDArray * a);
-void construct_Array(struct Array a);
+void construct_Array(struct Array * a);
 void print_2DArray(struct TwoDArray * a);
+void print_Array(struct Array a);
 int search_Array(struct Array a, int value);
 
 #endif
