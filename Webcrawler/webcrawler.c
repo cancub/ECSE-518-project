@@ -43,7 +43,7 @@ int main()
     struct node * temp;
     FILE * ofp = fopen("output.txt","w");
 
-    char starter[] = "https://publications.mcgill.ca/reporter/2015/03/who-will-rule-the-roost-canadians-asked-to-vote-for-national-bird/";    // the starting node
+    char starter[] = "http://www.mcgill.ca";    // the starting node
 
     //initialize linked lists
     parsed_links = initialize_linked_list(1);
@@ -55,7 +55,7 @@ int main()
     do
     {        
 
-        // printf("looking at link %s at index %d\n",link, index_under_wget);
+        printf("looking at link %s at index %d\n",link, index_under_wget);
 
         wget_wrapper(link, raw_links);
 
@@ -244,6 +244,86 @@ void print_string(char * string_thing)
     }
 }
 
+void filter_and_store(char * raw, struct Linked_list * a)
+{        
+
+    
+    FILE * ifp = fopen(raw_links,"r");
+    char link_to_filter[2048];
+
+    if(ifp == NULL)
+    {
+        printf("Could not open %s for writing\n", raw_links);
+        exit(0);
+    }
+
+    // get the next link from the file of raw links
+    while(fscanf(ifp,"%s", link_to_filter) == 1)
+    {   
+        // attempt to add the link to the parsed list
+
+
+        add_link(a,link_to_filter, index_under_wget);
+    }; 
+
+    fclose(ifp);
+}
+
+void add_link(struct Linked_list * a, char * link, int from_index)
+{
+
+
+    // printf("here with link %s\n", link);
+
+    // printf("testing %s\n",link );
+
+    if((strstr(link,".") != NULL) && (strstr(link,"//") != NULL))
+    {
+        char * cleanlink = clean_link(link);
+        int new_index = search_for_link(a,cleanlink);
+
+        // if(strcmp(cleanlink,"ca.mcgill.royalvictoria/") == 0)
+        // {
+        //     printf("new_index = %d, a->size = %d\n", new_index, a->size);
+        // }
+
+        if(new_index < a->size + 1)
+        {
+            // this link already exists in the parsed list
+            // therefore we do not need to add it, but will instead add the
+            // edge from the page that we just performed wget on (from_index) 
+            // to the index of the page we just found (new_index)
+
+            add_edge(a,from_index,new_index);        
+        }
+        else if(new_index == (a->size + 1))
+        {
+            // the link does not currently exist in our parsed list. so
+            // we give the link a number, create a node for it, add the edge
+            // from <from_index> to this new number, and add this node to the end
+            // of the parsed list
+            struct node * temp = (struct node *)malloc(sizeof(struct node));
+            char * new_link = remove_extra(link);
+            char * filtered_link = cleanlink;
+            temp->data = new_index;
+
+            temp->hyperlink =(char *)malloc(strlen(new_link) + 1);
+            strcpy(temp->hyperlink, new_link);
+            temp->filtered_hyperlink = (char *)malloc(strlen(filtered_link) + 1);
+            strcpy(temp->filtered_hyperlink, filtered_link);
+
+            construct_Array(&(temp->edges));
+
+            add_edge(a,from_index,new_index);
+        
+            append_node(a,temp);
+        }
+        else
+        {
+            printf("somethign went wrong\n");
+        }
+    }
+}
 
 void add_edge(struct Linked_list * a, int from_index, int to_index)
 {
@@ -267,83 +347,6 @@ void add_edge(struct Linked_list * a, int from_index, int to_index)
 
         temp = temp->next;
     }while(temp != a->root);
-}
-
-void add_link(struct Linked_list * a, char * link, int from_index)
-{
-
-    // printf("testing %s\n",link );
-
-    char * cleanlink = clean_link(link);
-    int new_index = search_for_link(a,cleanlink);
-
-    // if(strcmp(cleanlink,"ca.mcgill.royalvictoria/") == 0)
-    // {
-    //     printf("new_index = %d, a->size = %d\n", new_index, a->size);
-    // }
-
-    if(new_index < a->size + 1)
-    {
-        // this link already exists in the parsed list
-        // therefore we do not need to add it, but will instead add the
-        // edge from the page that we just performed wget on (from_index) 
-        // to the index of the page we just found (new_index)
-
-        add_edge(a,from_index,new_index);        
-    }
-    else if(new_index == (a->size + 1))
-    {
-        // the link does not currently exist in our parsed list. so
-        // we give the link a number, create a node for it, add the edge
-        // from <from_index> to this new number, and add this node to the end
-        // of the parsed list
-        struct node * temp = (struct node *)malloc(sizeof(struct node));
-        char * new_link = remove_extra(link);
-        char * filtered_link = cleanlink;
-        temp->data = new_index;
-
-        temp->hyperlink =(char *)malloc(strlen(new_link) + 1);
-        strcpy(temp->hyperlink, new_link);
-        temp->filtered_hyperlink = (char *)malloc(strlen(filtered_link) + 1);
-        strcpy(temp->filtered_hyperlink, filtered_link);
-
-        construct_Array(&(temp->edges));
-
-        add_edge(a,from_index,new_index);
-    
-        append_node(a,temp);
-    }
-    else
-    {
-        printf("somethign went wrong\n");
-    }
-}
-
-
-void filter_and_store(char * raw, struct Linked_list * a)
-{        
-
-    
-    FILE * ifp = fopen(raw_links,"r");
-    char link_to_filter[2048];
-
-
-    if(ifp == NULL)
-    {
-        printf("Could not open %s for writing\n", raw_links);
-        exit(0);
-    }
-
-    // get the next link from the file of raw links
-    while(fscanf(ifp,"%s", link_to_filter) == 1)
-    {   
-        // attempt to add the link to the parsed list
-
-
-        add_link(a,link_to_filter, index_under_wget);
-    }; 
-
-    fclose(ifp);
 }
 
 // char * append_directory(char * filename)
