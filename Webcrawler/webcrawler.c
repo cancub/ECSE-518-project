@@ -30,7 +30,8 @@ void add_edge(struct Linked_list * a, int from_index, int to_index);
 void add_link(struct Linked_list * a, char * link, int index);
 char * clean_link(char * url);
 int search_for_link(struct Linked_list * a, char * filtered_link);
-// void finish_up(struct Linked_list * parsed);
+void print_string(char * string_thing);
+char * rm_invalid(char * url);
 
 int index_under_wget = 1;
 char raw_links[] = "raw_links.txt";
@@ -39,8 +40,10 @@ int main()
 {
     char * link; 
     struct Linked_list * parsed_links;
+    struct node * temp;
+    FILE * ofp = fopen("output.txt","w");
 
-    char starter[] = "http://www.mcgill.ca";    // the starting node
+    char starter[] = "https://publications.mcgill.ca/reporter/2015/03/who-will-rule-the-roost-canadians-asked-to-vote-for-national-bird/";    // the starting node
 
     //initialize linked lists
     parsed_links = initialize_linked_list(1);
@@ -50,24 +53,54 @@ int main()
     add_link(parsed_links,link,index_under_wget);
 
     do
-    {
+    {        
+
+        // printf("looking at link %s at index %d\n",link, index_under_wget);
+
         wget_wrapper(link, raw_links);
 
         filter_and_store(raw_links, parsed_links);
 
         index_under_wget++;
 
-        link = (get_node_at_index(parsed_links,index_under_wget))->hyperlink;
+        link = (get_node_at_index(parsed_links,index_under_wget-1))->hyperlink;
 
-    }while(index_under_wget <= 1);
+        // print_linked_list(parsed_links);
+
+    }while(index_under_wget <= 80);
 
 
 
     // finish_up(parsed_links);
 
 
-    printf("Current parsed list:\n");
-    print_linked_list(parsed_links);
+    // printf("Current parsed list:\n");
+    // print_linked_list(parsed_links);
+
+    temp = parsed_links->root;
+    int i;
+
+    do
+    {
+        fprintf(ofp, "%s %d ", temp->filtered_hyperlink, temp->data);
+        if(temp->edges.array[0] != -1)
+        {
+            fprintf(ofp, "[");
+            for(i = 0; i < temp->edges.size; i++)
+            {
+                if(i < temp->edges.size - 1)
+                {
+                    fprintf(ofp, "%d,",temp->edges.array[i] );
+                }
+                else
+                {
+                    fprintf(ofp, "%d] ",temp->edges.array[i] );
+                }
+            }
+        }
+        temp = temp->next;
+        fprintf(ofp, "\n");
+    }while(temp != parsed_links->root);
 
     delete_linked_list(parsed_links);
 
@@ -135,42 +168,80 @@ int search_for_link(struct Linked_list * a, char * filtered_link)
 
     struct node * test;
     test = a->root;
-    int charnum;
+    // int charnum;
+
+    
 
     if (a->size > 0)
     {
         // we don't need to search for the link if the list is empty
         do  
         {   
-            if (strstr(filtered_link, "royalvictoria") != NULL)
-            {
-                printf("test->filtered_hyperlink = %s, filtered_link = %s\n",
-                    test->filtered_hyperlink,filtered_link);
-
-                if(strlen(filtered_link) == 25)
-                {
-                    charnum = (int)(filtered_link[24]);
-                    printf("%d\n",charnum);
-                }
-            }
+            
 
             if ( strcmp(test->filtered_hyperlink,filtered_link) == 0)
             {
-                printf("exixts already, test->data = %d\n", test->data);
+                // printf("%s exixts already, test->data = %d\t\t**********\n", filtered_link, test->data);
+                // sleep(1);
                 return test->data;
             }
             to_next(&test);
         }while(test != a->root);
     }
 
-    printf("does not exist\n");
+    // printf("%s does not exist\n", filtered_link);    
 
     return (a->size + 1);
 }
 
 char * clean_link(char * url)
 {
-    return add_slash(remove_extra(flip_url(url)));
+    // char * test = flip_url(url);
+
+    // test = remove_extra(test);
+
+    // test = add_slash(test);
+
+    return rm_invalid(add_slash(remove_extra(flip_url(url))));
+}
+
+char * rm_invalid(char * url)
+{
+    //remove invalid characters from the url that may have been added at some point
+    // it's a weak fix, but screw it.
+    int i = 0;
+
+    for(i = 0; i < strlen(url); i++)
+    {
+        if((int)(url[i]) < 33 || (int)(url[i]) > 126)
+        {
+
+            break;
+        }
+    }
+
+    if(i < strlen(url))
+    {
+        strcpy(url+i,url+i+1);
+    }
+
+    // if(strstr(url,"wordpress") != NULL)
+    // {
+    //     print_string(url);
+    //     sleep(1);
+    // }
+
+    return url;
+}
+
+void print_string(char * string_thing)
+{
+    int i;
+
+    for(i = 0; i < strlen(string_thing); i++)
+    {
+        printf("%c\n", string_thing[i]);
+    }
 }
 
 
@@ -201,13 +272,15 @@ void add_edge(struct Linked_list * a, int from_index, int to_index)
 void add_link(struct Linked_list * a, char * link, int from_index)
 {
 
-    printf("testing %s\n",link );
-    int new_index = search_for_link(a,clean_link(link));
+    // printf("testing %s\n",link );
 
-    if(strcmp(clean_link(link),"ca.mcgill.royalvictoria/") == 0)
-    {
-        printf("new_index = %d, a->size = %d\n", new_index, a->size);
-    }
+    char * cleanlink = clean_link(link);
+    int new_index = search_for_link(a,cleanlink);
+
+    // if(strcmp(cleanlink,"ca.mcgill.royalvictoria/") == 0)
+    // {
+    //     printf("new_index = %d, a->size = %d\n", new_index, a->size);
+    // }
 
     if(new_index < a->size + 1)
     {
@@ -226,7 +299,7 @@ void add_link(struct Linked_list * a, char * link, int from_index)
         // of the parsed list
         struct node * temp = (struct node *)malloc(sizeof(struct node));
         char * new_link = remove_extra(link);
-        char * filtered_link = clean_link(link);
+        char * filtered_link = cleanlink;
         temp->data = new_index;
 
         temp->hyperlink =(char *)malloc(strlen(new_link) + 1);
@@ -249,8 +322,11 @@ void add_link(struct Linked_list * a, char * link, int from_index)
 
 void filter_and_store(char * raw, struct Linked_list * a)
 {        
+
+    
     FILE * ifp = fopen(raw_links,"r");
-    char link_to_filter[200];
+    char link_to_filter[2048];
+
 
     if(ifp == NULL)
     {
@@ -262,6 +338,8 @@ void filter_and_store(char * raw, struct Linked_list * a)
     while(fscanf(ifp,"%s", link_to_filter) == 1)
     {   
         // attempt to add the link to the parsed list
+
+
         add_link(a,link_to_filter, index_under_wget);
     }; 
 
@@ -285,13 +363,9 @@ void filter_and_store(char * raw, struct Linked_list * a)
 
 char * remove_extra(char * url)
 {
-
-    if (strstr(url, "royalvictoria") != NULL)
-    {
-        printf("size of incoming link = %d\n",(int)(strlen(url)) );
-    }
+    
     char * test = url;
-    int total_size, i;
+    int total_size;
 
     test = strchr(url,'?');
     // printf("test = %s\n", test );
@@ -304,21 +378,6 @@ char * remove_extra(char * url)
         // printf("after = %s\n",url);
     }
 
-    // i = total_size-1;
-    // while(i >= 0)
-    // {
-    //     if((int)(url[i]) < 32)
-    //     {
-    //         url[i--] = '\0';
-    //     }
-    // }
-
-    // printf("%s\n",url );
-
-    if (strstr(url, "royalvictoria") != NULL)
-    {
-        printf("size of outgoing link = %d\n",(int)(strlen(url)) );
-    }
     return url;
 }
 
@@ -363,20 +422,19 @@ sed -e 's/^.*\"\\([^\"]\\+\\)\".*$/\\1/g' > y";
 
 char * add_slash(char * url)
 {
-    char * test = url;
     char * result = (char *)malloc(sizeof(char) * (strlen(url) + 2));
 
     int i = 0;
 
-    while(test[i] != '\0')
+    while(url[i] != '\0')
     {
         i++;
     };
 
-    if (test[i-1] != '/')
+    if (url[i-1] != '/')
     {
-        strncpy(result,url,strlen(url));
-        result[strlen(url)]='/';
+        strcpy(result,url);
+        strcpy(result + strlen(url), "/\0");
     }
     else
     {

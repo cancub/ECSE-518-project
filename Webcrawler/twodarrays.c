@@ -37,11 +37,17 @@ void print_Array(struct Array a)
 {
 	int i;
 
+	printf("[");
+
 	for(i = 0; i < a.size; i++)
 	{
-		printf("%3d",a.array[i] );
+		printf("%d",a.array[i] );
+		if(i < a.size -1)
+		{
+			printf(", ");
+		}
 	}
-	// printf("\n");
+	printf("]");
 }
 
 void construct_2DArray(struct TwoDArray * a)

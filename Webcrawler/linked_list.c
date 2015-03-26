@@ -292,12 +292,11 @@ void print_linked_list(struct Linked_list * a)
     do
     {
 
-        printf("from_index/index = %d, link = %s",
-            temp->data, (temp->hyperlink));
+        printf("link[%d] = \t%s",temp->data, (temp->hyperlink));
 
         if ((int)((temp->edges).size) > 0)
         {
-            printf(", edges = ");
+            printf(", \tedges = ");
             print_Array(temp->edges);
         }
         printf("\n");
