@@ -4,6 +4,13 @@
 #include "twodarrays.h"
 
 
+
+struct PointArray
+{
+	int ** array;
+	size_t size;
+};
+
 struct node
 {
 	// for our purposes in webcrawler, we will use data for the index of the link
@@ -12,7 +19,7 @@ struct node
     struct node *previous;
     char * hyperlink;
     char * filtered_hyperlink;
-    struct Array edges;
+    struct PointArray edges;
 
 };
 

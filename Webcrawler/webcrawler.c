@@ -4,89 +4,47 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <time.h>
+#include <unistd.h>
+#include <errno.h>
+#include "linked_list.h"
 
 #define BUFFLEN 2500
+
+// NOTE THAT THE FORMAT FOR FILTERED LINKS IS 
+// (completely filtered, extra removed, index of page that pointed to this one)
+
+// WHILE THE FULLY PARSED LINKS ARE STORED AS
+// (completely filtered, extra removed, this page's index)
 
 //http://stackoverflow.com/questions/298510/how-to-get-the-current-directory-in-a-c-program
 
 char * flip_url(char * url);
 char * add_slash(char * url);
 void wget_wrapper(char * website, char * outputfile);
-void crawl_page(char * inputfile, char * newinputfile, char * outputfile);
+void crawl_page(char * inputfile, char * newinputfile, char * parsed_links, char * raw_links);
 char * remove_extra(char * url);
-<<<<<<< HEAD:webcrawler.c
-
-int total_hyperlinks = 1;
-int link_under_wget = 1;
-=======
 char * append_directory(char * filename);
 void filter_and_store(char * raw, struct Linked_list * a);
 char * get_next_link(struct Linked_list * parsed);
-void add_edge(struct Linked_list * a, int from_index, int to_index);
+void add_edge(struct Linked_list * a, int from_index, int * to_index);
 void add_link(struct Linked_list * a, char * link, int index);
 char * clean_link(char * url);
-int search_for_link(struct Linked_list * a, char * filtered_link);
+int * search_for_link(struct Linked_list * a, char * filtered_link);
 void print_string(char * string_thing);
 char * rm_invalid(char * url);
+void print_to_file(struct Linked_list * a, char * filename);
+int search_edges(struct PointArray a, int * to_index);
+void construct_edges(struct PointArray * a);
+void print_edges(struct PointArray a);
 
 int index_under_wget = 1;
 char raw_links[] = "raw_links.txt";
->>>>>>> 862190b95821b5d31e392072dda5cded970fa6b0:Webcrawler/webcrawler.c
 
 int main()
 {
     char * link; 
     struct Linked_list * parsed_links;
-    struct node * temp;
-    FILE * ofp = fopen("output.txt","w");
 
-<<<<<<< HEAD:webcrawler.c
-	char * flipped; 
-	int current_state = 0, i = 0;
-	FILE * toclear;
-
-	char ** possible_filenames = (char **)malloc(2*sizeof(char *));
-	char filename1[40] = "input1.txt";
-	char filename2[40] = "input2.txt";
-	possible_filenames[0] = filename1;
-	possible_filenames[1] = filename2;
-
-	char final_output[15] = "final.txt";
-
-	// clear all the 
-	toclear = fopen(possible_filenames[0],"w");
-	fclose(toclear);
-	toclear = fopen(possible_filenames[1],"w");
-	fclose(toclear);
-	toclear = fopen(final_output,"w");
-	fclose(toclear);	
-	
-	char output[200];	// holds the most recently obtained hyperlink
-	char starter[] = "http://www.mcgill.ca";	// the starting node
-
-	//open the output file
-	FILE * ofp = fopen(final_output,"w");
-	//get the flipped version of the starter node
-	flipped = add_slash(remove_extra(flip_url(starter)));
-	// print it to the output file so that we know if we've seen it before
-	fprintf(ofp, "%s %s %d\n",flipped,starter,total_hyperlinks++);
-	//close to allow for appending to this file
-	fclose(ofp);
-
-	// get all the hyperlinks from the starter node and print them to the initiial input file
-	wget_wrapper(starter, possible_filenames[0]);
-	
-
-	while(i < 10)
-	{
-		crawl_page(possible_filenames[current_state],possible_filenames[abs(1-current_state)],final_output);
-		current_state = abs(1-current_state);
-		i++;
-	}
-
-	return 0;
-=======
     char starter[] = "http://www.mcgill.ca";    // the starting node
 
     //initialize linked lists
@@ -111,7 +69,7 @@ int main()
 
         // print_linked_list(parsed_links);
 
-    }while(index_under_wget <= 80);
+    }while(index_under_wget <= 3);
 
 
 
@@ -121,76 +79,16 @@ int main()
     // printf("Current parsed list:\n");
     // print_linked_list(parsed_links);
 
-    temp = parsed_links->root;
-    int i;
-
-    do
-    {
-        fprintf(ofp, "%s %d ", temp->filtered_hyperlink, temp->data);
-        if(temp->edges.array[0] != -1)
-        {
-            fprintf(ofp, "[");
-            for(i = 0; i < temp->edges.size; i++)
-            {
-                if(i < temp->edges.size - 1)
-                {
-                    fprintf(ofp, "%d,",temp->edges.array[i] );
-                }
-                else
-                {
-                    fprintf(ofp, "%d] ",temp->edges.array[i] );
-                }
-            }
-        }
-        temp = temp->next;
-        fprintf(ofp, "\n");
-    }while(temp != parsed_links->root);
+    print_to_file(parsed_links,"output.txt");
 
     delete_linked_list(parsed_links);
 
     return 0;
->>>>>>> 862190b95821b5d31e392072dda5cded970fa6b0:Webcrawler/webcrawler.c
 
 }
 
 
 
-<<<<<<< HEAD:webcrawler.c
-
-
-
-char * remove_extra(char * url)
-{
-	char * test = url;
-	char * result;
-	int total_size;
-
-	test = strchr(url,'?');
-	// printf("test = %s\n", test );
-
-	if (test != NULL)
-	{
-		total_size = test-url;
-		url[total_size] = '\0';
-	}
-
-	return url;
-}
-
-void wget_wrapper(char * website, char * outputfile)
-{
-	// printf("after call website = %s...TEST\n",website );
-
-	char web_address[BUFFLEN] = "wget -q x -O - | tr \"\\t\\r\\n'\" '   \"' | grep -i -o '<a[^>]\\+href[ ]*=[ \\t]*\"\\(ht\\|f\\)tps\\?:[^\"]\\+\"' |  sed -e 's/^.*\"\\([^\"]\\+\\)\".*$/\\1/g' >> y"; 
-	char * after_address = strchr(web_address,'x');
-	int first_copy = after_address - web_address;
-	after_address += sizeof(char);
-	char * after_file = strchr(web_address,'y');
-	int second_copy = after_file - after_address;
-	after_file += sizeof(char); 
-
-	char final_addr[200];
-=======
 
 
 
@@ -200,6 +98,42 @@ void wget_wrapper(char * website, char * outputfile)
 //functions
 
 
+void print_to_file(struct Linked_list * a, char * filename)
+{
+
+
+    FILE * ofp = fopen(filename,"w");
+    struct node * temp = a->root;
+    int * to_print;
+
+    int i;
+
+    do
+    {
+        fprintf(ofp, "%s %d ", temp->filtered_hyperlink, temp->data);
+        if(temp->edges.array[0] != NULL)
+        {
+            fprintf(ofp, "[");
+            for(i = 0; i < temp->edges.size; i++)
+            {
+                to_print = temp->edges.array[i];
+
+                if(i < temp->edges.size - 1)
+                {
+                    fprintf(ofp, "%d,", *to_print );
+                }
+                else
+                {
+                    fprintf(ofp, "%d] ",*to_print );
+                }
+            }
+        }
+        temp = temp->next;
+        fprintf(ofp, "\n");
+    }while(temp != a->root);
+
+    fclose(ofp);
+}
 
 
 // void finish_up(struct Linked_list * queue, struct Linked_list * parsed)
@@ -239,7 +173,7 @@ void wget_wrapper(char * website, char * outputfile)
 //     }
 // }
 
-int search_for_link(struct Linked_list * a, char * filtered_link)
+int * search_for_link(struct Linked_list * a, char * filtered_link)
 {
     // search through the linked list for a node which contains the same filtered_hyperlink
     // member as the test filtered_link and then return the index of this link.
@@ -249,6 +183,7 @@ int search_for_link(struct Linked_list * a, char * filtered_link)
 
     struct node * test;
     test = a->root;
+    int * result;
     // int charnum;
 
     
@@ -264,15 +199,15 @@ int search_for_link(struct Linked_list * a, char * filtered_link)
             {
                 // printf("%s exixts already, test->data = %d\t\t**********\n", filtered_link, test->data);
                 // sleep(1);
-                return test->data;
+                result = &(test->data);
+                return result;
             }
             to_next(&test);
         }while(test != a->root);
     }
 
-    // printf("%s does not exist\n", filtered_link);    
-
-    return (a->size + 1);
+    // printf("%s does not exist\n", filtered_link);   
+    return NULL;
 }
 
 char * clean_link(char * url)
@@ -361,23 +296,23 @@ void add_link(struct Linked_list * a, char * link, int from_index)
     if((strstr(link,".") != NULL) && (strstr(link,"//") != NULL))
     {
         char * cleanlink = clean_link(link);
-        int new_index = search_for_link(a,cleanlink);
+        int * to_index = search_for_link(a,cleanlink);
 
         // if(strcmp(cleanlink,"ca.mcgill.royalvictoria/") == 0)
         // {
         //     printf("new_index = %d, a->size = %d\n", new_index, a->size);
         // }
 
-        if(new_index < a->size + 1)
+        if(to_index != NULL)
         {
             // this link already exists in the parsed list
             // therefore we do not need to add it, but will instead add the
             // edge from the page that we just performed wget on (from_index) 
             // to the index of the page we just found (new_index)
 
-            add_edge(a,from_index,new_index);        
+            add_edge(a,from_index,to_index);        
         }
-        else if(new_index == (a->size + 1))
+        else if(to_index == NULL)
         {
             // the link does not currently exist in our parsed list. so
             // we give the link a number, create a node for it, add the edge
@@ -386,41 +321,66 @@ void add_link(struct Linked_list * a, char * link, int from_index)
             struct node * temp = (struct node *)malloc(sizeof(struct node));
             char * new_link = remove_extra(link);
             char * filtered_link = cleanlink;
-            temp->data = new_index;
+            temp->data = a->size + 1;
 
             temp->hyperlink =(char *)malloc(strlen(new_link) + 1);
             strcpy(temp->hyperlink, new_link);
             temp->filtered_hyperlink = (char *)malloc(strlen(filtered_link) + 1);
             strcpy(temp->filtered_hyperlink, filtered_link);
 
-            construct_Array(&(temp->edges));
+            construct_edges(&(temp->edges));
 
-            add_edge(a,from_index,new_index);
+            int * test = &(temp->data);
+            printf("index in question for the new node: %d\n",*test );
+            add_edge(a,from_index,&(temp->data));
         
             append_node(a,temp);
         }
         else
         {
-            printf("somethign went wrong\n");
+            printf("something went wrong\n");
         }
     }
 }
 
-void add_edge(struct Linked_list * a, int from_index, int to_index)
+void construct_edges(struct PointArray * a)
+{
+    a->size = 0;
+    a->array = (int **)malloc(sizeof(int *));
+    a->array[0] = NULL;
+}
+
+void add_edge(struct Linked_list * a, int from_index, int * to_index)
 {
 
     // this function is called when an edge is being added to one of the
     // links that exists in the parsed linked list
     struct node * temp = a->root;
 
+    printf("from_index = %d, to_index = %d\n",from_index,*to_index );
+    sleep(1);
+
     do
     {
+        // if we have found the node whos page contained the link, move on
         if(temp->data == from_index)
         {
+            // printf("here\n");
 
-            if(search_Array(temp->edges, to_index) == 0)
+            // check to see if the edge already exists in the array
+            if(search_edges(temp->edges, to_index) == 0)
             {
-                add_element(&(temp->edges),to_index);                
+                printf("to_index = %d, temp->edges.size = %d\n", *to_index, (int)(temp->edges.size));
+                // increase the size of the array if it already contains indices
+                if (temp->edges.size > 0)
+                {
+                    temp->edges.array = (int **)realloc(temp->edges.array, (sizeof(int))*((int)(temp->edges.size) +1));
+                }
+
+                temp->edges.array[temp->edges.size] = to_index;
+                temp->edges.size += 1;     
+                printf("adding edge from %d to %d\n", from_index, *to_index); 
+                printf("proof: here is the first node's first edge: %d\n",*(a->root->edges.array[0]) );          
             }
             
             break;
@@ -428,6 +388,44 @@ void add_edge(struct Linked_list * a, int from_index, int to_index)
 
         temp = temp->next;
     }while(temp != a->root);
+}
+
+int search_edges(struct PointArray a, int * to_index)
+{
+    // takes an array of pointers and determines if a specific pointer
+    // already exists in the array
+
+    int i, result = 0;
+
+    for (i = 0; i < a.size; i++)
+    {
+        printf("array[%d] = , array.size = %d\n",i,(int)(a.size));
+        if(a.array[i] == to_index)
+        {
+            result = 1;
+            break;
+        }
+    }
+
+    printf("here\n");
+    return result;
+}
+
+void print_edges(struct PointArray a)
+{
+    int i;
+
+    printf("[");
+
+    for(i = 0; i < a.size; i++)
+    {
+        printf("%d",*(a.array[i]) );
+        if(i < a.size -1)
+        {
+            printf(", ");
+        }
+    }
+    printf("]");
 }
 
 // char * append_directory(char * filename)
@@ -450,21 +448,10 @@ char * remove_extra(char * url)
     
     char * test = url;
     int total_size;
->>>>>>> 862190b95821b5d31e392072dda5cded970fa6b0:Webcrawler/webcrawler.c
 
-	int length = 0;
-	strncpy(final_addr + length*sizeof(char), web_address, first_copy);
-	length += first_copy;
-	strncpy(final_addr + length*sizeof(char), website,strlen(website));
-	length += strlen(website);
-	strncpy(final_addr + length*sizeof(char), after_address, second_copy);
-	length += second_copy;
-	strncpy(final_addr + length*sizeof(char), outputfile, strlen(outputfile));
-	length += strlen(outputfile);
-	strcpy(final_addr + length*sizeof(char), after_file);
+    test = strchr(url,'?');
+    // printf("test = %s\n", test );
 
-<<<<<<< HEAD:webcrawler.c
-=======
     if (test != NULL)
     {
         // printf("before = %s\n",url);
@@ -472,115 +459,10 @@ char * remove_extra(char * url)
         url[total_size] = '\0';
         // printf("after = %s\n",url);
     }
->>>>>>> 862190b95821b5d31e392072dda5cded970fa6b0:Webcrawler/webcrawler.c
 
-
-<<<<<<< HEAD:webcrawler.c
-	printf("final address = %s\n",final_addr );
-
-	system(final_addr);
-
+    return url;
 }
 
-
-
-void crawl_page(char * inputfile, char * newinputfile, char * outputfile)
-{
-
-	int i;
-	char * flipped, start[200];
-	int exists = 0;
-	
-
-	FILE * ifp = fopen(inputfile,"r"); //where we will retreive the next hyperlink to be scoured
-	FILE * ofp = fopen(newinputfile,"w"); //where we will store the remainder of the hyperlinks in the file
-
-	char * output;	//this will hold the first hyperlink in the inputfile
-	char dummy[200], test[200];
-
-	//get the first hyperlink
-	fscanf(ifp,"%s", start);
-	// printf("start = %s, length = %d\n", start, (int)(strlen(start)) );
-	output = (char *)malloc(sizeof(char)*strlen(start));
-	output = remove_extra(start);
-
-	// printf("output = %s\n", output );
-
-	output[strlen(start)] = '\0';
-	// printf("output before flipped = %s...TEST\n", output );
-
-	//get the link as how it would appear in the final file
-	flipped = flip_url(output);
-	// printf("output after flipped = %s...TEST\n", output );
-	flipped = add_slash(flipped);
-
-	//store the remainder of the hyperlinks in the new input file;
-	while(fscanf(ifp,"%s",test) == 1)
-	{
-		// printf("output = %s\n",output );
-		fprintf(ofp, "%s\n", test);
-
-	};
-
-	fclose(ifp);
-	fclose(ofp);
-
-	// use the outputfile, which contains a list of already-crawled pages, as an input
-	ifp = fopen(outputfile,"r");
-
-	// search through the output file to determine if the link has already been used before
-	while(fscanf(ifp,"%s %s %d", test,dummy, &i) == 3)
-	{	
-		if (strcmp(flipped,test) == 0)
-		{
-			exists = 1;
-		}
-	};
-
-
-
-	// if it hasn't been used before, append it to the list
-	if (exists == 0)
-	{
-		ofp = fopen(outputfile,"a");
-
-		fprintf(ofp, "%s %s %d\n", flipped, output, total_hyperlinks++);
-
-		fclose(ofp);
-
-		
-
-		// add all the links we see while going through this link
-		wget_wrapper(output,newinputfile);
-
-	}
-
-}
-
-char * add_slash(char * url)
-{
-	char * test = url;
-	char * result = (char *)malloc(sizeof(char) * (strlen(url) + 2));
-
-	int i = 0;
-
-	while(test[i] != '\0')
-	{
-		i++;
-	};
-
-	if (test[i-1] != '/')
-	{
-		strncpy(result,url,strlen(url));
-		result[strlen(url)]='/';
-	}
-	else
-	{
-		result = url;
-	}
-
-	return result;
-=======
 void wget_wrapper(char * website, char * outputfile)
 {
 
@@ -642,7 +524,6 @@ char * add_slash(char * url)
     }
 
     return result;
->>>>>>> 862190b95821b5d31e392072dda5cded970fa6b0:Webcrawler/webcrawler.c
 }
 
 
@@ -652,116 +533,111 @@ char * flip_url(char * url)
 {
 
 
-	int length = strlen(url);
+    int length = strlen(url);
 
-<<<<<<< HEAD:webcrawler.c
-	char * host, * top_level_domain, * end_of_string, * middle, * filepath, * result, * hostname;	
-	int tld_size, last_letter_of_host, i, middle_size, hostname_size;
-=======
     char * host, * top_level_domain, * end_of_string, * middle, * filepath, * result;   
     int tld_size, middle_size, hostname_size;
->>>>>>> 862190b95821b5d31e392072dda5cded970fa6b0:Webcrawler/webcrawler.c
 
-	char * test = url;
+    char * test = url;
 
-	char * new_host = (char *)malloc(length*sizeof(char));
-	
+    char * new_host = (char *)malloc(sizeof(url));
+    
 
 
-	//search for either the '\0' string terminator or the first / to start the path portion
-	// of the url
+    //search for either the '\0' string terminator or the first / to start the path portion
+    // of the url
 
-	do 
-	{
-		test = strchr(test + sizeof(char),'/');
-		// printf("test = %s\n", test);
-		// sleep(1);
-	}while ((test != NULL) && (((test[-1] == '/') || (test[1] == '/'))));
+    do 
+    {
+        test = strchr(test + sizeof(char),'/');
+        // printf("test = %s\n", test);
+        // sleep(1);
+    }while ((test != NULL) && (((test[-1] == '/') || (test[1] == '/'))));
 
-	result = test;
+    result = test;
 
-	test = url;
+    test = url;
 
-	if( strchr(&(strchr(url, '.')[1]),'.') == NULL )
-	{
-		//there was only one dot in the url, meaning that we have something like
-		// http://google.com/
+    if( strchr(&(strchr(url, '.')[1]),'.') == NULL )
+    {
+        //there was only one dot in the url, meaning that we have something like
+        // http://google.com/
 
-		host = (char *)malloc(3*sizeof(char));
-		host[0] = host[1] = host[2] = 'w';
-		hostname_size = 3;
+        host = (char *)malloc(3*sizeof(char));
+        host[0] = host[1] = host[2] = 'w';
+        hostname_size = 3;
 
 
 
-		if(result == NULL)
-		{
-			end_of_string = strchr(url,'\0');
+        if(result == NULL)
+        {
+            end_of_string = strchr(url,'\0');
 
-			top_level_domain = &((strchr(url,'.'))[1]);
+            top_level_domain = &((strchr(url,'.'))[1]);
 
-			// printf("tld = %s\n", top_level_domain);
+            // printf("tld = %s\n", top_level_domain);
 
-			tld_size = end_of_string - top_level_domain;
+            tld_size = end_of_string - top_level_domain;
 
-		}
-		else
-		{
-			do
-			{
-				// printf("here\n");
-				//find the last dot before the path. this immediately precedes the top level domain.
-				test = strchr(&(test[1]),'.');
-				// printf("test = %s\n", test);
-			}
-			while((strchr(&(test[1]),'.') != NULL) && (strchr(&(test[1]),'.') - result < 0));
+        }
+        else
+        {
+            do
+            {
+                // printf("here\n");
+                //find the last dot before the path. this immediately precedes the top level domain.
+                test = strchr(&(test[1]),'.');
+                // printf("test = %s\n", test);
+            }
+            while((strchr(&(test[1]),'.') != NULL) && (strchr(&(test[1]),'.') - result < 0));
 
-			top_level_domain = &(test[1]);
+            top_level_domain = &(test[1]);
 
-			// printf("tld = %s\n", top_level_domain);
+            // printf("tld = %s\n", top_level_domain);
 
-			// find the tld length
-			tld_size = result - top_level_domain;
+            // find the tld length
+            tld_size = result - top_level_domain;
 
-			test = url;
-		}
+            test = url;
+        }
 
-		do 
-		{
-			test = strchr(test + sizeof(char),'/');
-			// printf("test = %s\n", test);
-			// sleep(1);
-		}while (test[-1] != '/');
+        do 
+        {
+            test = strchr(test + sizeof(char),'/');
+            // printf("test = %s\n", test);
+            // sleep(1);
+        }while (test[-1] != '/');
 
-		test = &(test[1]); //starts with the hostname
+        test = &(test[1]); //starts with the hostname
 
-		middle = (char *)malloc((length+1)*sizeof(char));
-		middle[length] = '\0';
-		middle[0] = '.';
-		strcpy(middle + sizeof(char), test);
-		middle_size = top_level_domain - test + 1;
+        middle = (char *)malloc((length+1)*sizeof(char));
+        middle[length] = '\0';
+        middle[0] = '.';
+        strcpy(middle + sizeof(char), test);
+        middle_size = top_level_domain - test + 1;
 
-		// printf("middle = %s\n", middle);
+        // printf("middle = %s\n", middle);
 
-		// printf("hostname_size = %d, tld_size = %d, middle_size = %d\n", hostname_size,tld_size,middle_size);
+        // printf("hostname_size = %d, tld_size = %d, middle_size = %d\n", hostname_size,tld_size,middle_size);
 
-		strncpy(new_host, top_level_domain, tld_size);
-		// printf("new_host = %s\n", new_host );
-		strncpy(new_host + sizeof(char)*tld_size,middle,middle_size);
-		// printf("new_host = %s\n", new_host );
-		strncpy(new_host + sizeof(char)*(tld_size+middle_size),host,hostname_size);
-		// printf("new_host = %s\n", new_host );
+        strncpy(new_host, top_level_domain, tld_size);
+        // printf("new_host = %s\n", new_host );
+        strncpy(new_host + sizeof(char)*tld_size,middle,middle_size);
+        // printf("new_host = %s\n", new_host );
+        strncpy(new_host + sizeof(char)*(tld_size+middle_size),host,hostname_size);
+        // printf("new_host = %s\n", new_host );
 
-		if(result !=NULL)
-		{
-			strcpy(new_host + sizeof(char)*(tld_size+middle_size+hostname_size), result);
-			// printf("new_host = %s\n", new_host );
-		}
+        if(result !=NULL)
+        {
+            strcpy(new_host + sizeof(char)*(tld_size+middle_size+hostname_size), result);
+            // printf("new_host = %s\n", new_host );
+        }
 
 
 
 
-		return new_host;
-	}
+        return new_host;
+    }
 
 
 
@@ -769,112 +645,112 @@ char * flip_url(char * url)
 
 
 
-	if ( result == NULL)
-	{
-		// printf("the test was null\n");
-		// there was no filepath, just the main site
-		end_of_string = strchr(url,'\0');
-		test = url;
-		do
-		{
-			//find the last dot. this immediately precedes the top level domain.
-			test = strchr(&(test[1]),'.');
-		}
-		while(strchr(&(test[1]),'.') != NULL);
+    if ( result == NULL)
+    {
+        // printf("the test was null\n");
+        // there was no filepath, just the main site
+        end_of_string = strchr(url,'\0');
+        test = url;
+        do
+        {
+            //find the last dot. this immediately precedes the top level domain.
+            test = strchr(&(test[1]),'.');
+        }
+        while(strchr(&(test[1]),'.') != NULL);
 
-		top_level_domain = &(test[1]);
-		// printf("tld = %s\n", top_level_domain);
+        top_level_domain = &(test[1]);
+        // printf("tld = %s\n", top_level_domain);
 
-		// find the tld length
-		tld_size = end_of_string - top_level_domain;
+        // find the tld length
+        tld_size = end_of_string - top_level_domain;
 
-		test = url;
+        test = url;
 
-		do
-		{	
-			//find the second last dot. this is what seperates the hostname
-			//from the remainder of the host
-			test = strchr(&(test[1]),'.');
-		}while( strchr(&(strchr(&(test[1]),'.')[1]),'.') != NULL);
+        do
+        {   
+            //find the second last dot. this is what seperates the hostname
+            //from the remainder of the host
+            test = strchr(&(test[1]),'.');
+        }while( strchr(&(strchr(&(test[1]),'.')[1]),'.') != NULL);
 
-		middle = test;
-		middle_size = top_level_domain - middle;
-		// printf("middle = %s\n", middle);
-	}
-	else
-	{
-		// here we do have a filepath at the end and test points to the beginning of this
-		// filepath, i.e. the first '/' of the path
+        middle = test;
+        middle_size = top_level_domain - middle;
+        // printf("middle = %s\n", middle);
+    }
+    else
+    {
+        // here we do have a filepath at the end and test points to the beginning of this
+        // filepath, i.e. the first '/' of the path
 
-		filepath = result;
+        filepath = result;
 
-		test = url;
+        test = url;
 
-		do
-		{
-			// printf("here\n");
-			//find the last dot before the path. this immediately precedes the top level domain.
-			test = strchr(&(test[1]),'.');
-			// printf("test = %s\n", test);
-		}
-		while((strchr(&(test[1]),'.') - filepath < 0) && (strchr(&(test[1]),'.') != NULL));
+        do
+        {
+            // printf("here\n");
+            //find the last dot before the path. this immediately precedes the top level domain.
+            test = strchr(&(test[1]),'.');
+            // printf("test = %s\n", test);
+        }
+        while((strchr(&(test[1]),'.') - filepath < 0) && (strchr(&(test[1]),'.') != NULL));
 
-		top_level_domain = &(test[1]);
+        top_level_domain = &(test[1]);
 
-		// printf("tld = %s\n", top_level_domain);
+        // printf("tld = %s\n", top_level_domain);
 
-		// find the tld length
-		tld_size = filepath - top_level_domain;
+        // find the tld length
+        tld_size = filepath - top_level_domain;
 
-		test = url;
+        test = url;
 
-		do
-		{	
-			//find the second last dot. this is what seperates the hostname
-			//from the remainder of the host
-			test = strchr(&(test[1]),'.');
-		}while( (strchr(&(strchr(&(test[1]),'.')[1]),'.') - filepath < 0) && (strchr(&(strchr(&(test[1]),'.')[1]),'.') != NULL));
+        do
+        {   
+            //find the second last dot. this is what seperates the hostname
+            //from the remainder of the host
+            test = strchr(&(test[1]),'.');
+        }while( (strchr(&(strchr(&(test[1]),'.')[1]),'.') - filepath < 0) && (strchr(&(strchr(&(test[1]),'.')[1]),'.') != NULL));
 
-		middle = test;
+        middle = test;
 
-		// printf("middle = %s\n",middle );
-		middle_size = top_level_domain - middle;
-	}
+        // printf("middle = %s\n",middle );
+        middle_size = top_level_domain - middle;
+    }
 
-	test = url;
-	do 
-	{
-		test = strchr(test + sizeof(char),'/');
-		// printf("test = %s\n", test);
-		// sleep(1);
-	}while (test[-1] != '/');
+    test = url;
+    do 
+    {
+        test = strchr(test + sizeof(char),'/');
+        // printf("test = %s\n", test);
+        // sleep(1);
+    }while (test[-1] != '/');
 
-	host = test + sizeof(char);
+    host = test + sizeof(char);
 
-	// printf("host = %s\n",host );
+    // printf("host = %s\n",host );
 
-	hostname_size = middle - host;
+    hostname_size = middle - host;
 
-	// printf("hostname_size = %d, tld_size = %d, middle_size = %d\n", hostname_size,tld_size,middle_size);
+    // printf("hostname_size = %d, tld_size = %d, middle_size = %d\n", hostname_size,tld_size,middle_size);
 
-	strncpy(new_host, top_level_domain, tld_size);
-	// printf("new_host = %s\n", new_host );
-	strncpy(new_host + sizeof(char)*tld_size,middle,middle_size);
-	// printf("new_host = %s\n", new_host );
-	strncpy(new_host + sizeof(char)*(tld_size+middle_size),host,hostname_size);
-	// printf("new_host = %s\n", new_host );
+    strcpy(new_host, top_level_domain);
+    // printf("new_host = %s\n", new_host );
+    strcpy(new_host + sizeof(char)*tld_size,middle);
+    // printf("new_host = %s\n", new_host );
+    strcpy(new_host + sizeof(char)*(tld_size+middle_size),host);
+    // printf("new_host = %s\n", new_host );
 
-	if(result !=NULL)
-	{
-		strcpy(new_host + sizeof(char)*(tld_size+middle_size+hostname_size), filepath);
-		// printf("new_host = %s\n", new_host );
-	}
+    if(result !=NULL)
+    {
+        strcpy(new_host + sizeof(char)*(tld_size+middle_size+hostname_size), filepath);
+        // printf("new_host = %s\n", new_host );
+    }
 
-	// printf("%s\n",test);
+    // printf("%s\n",test);
 
 
-	
+    
 
-	return new_host;
+    return new_host;
 
 }

@@ -292,14 +292,7 @@ void print_linked_list(struct Linked_list * a)
     do
     {
 
-        printf("link[%d] = \t%s",temp->data, (temp->hyperlink));
-
-        if ((int)((temp->edges).size) > 0)
-        {
-            printf(", \tedges = ");
-            print_Array(temp->edges);
-        }
-        printf("\n");
+        printf("link[%d] = \t%s\n",temp->data, (temp->hyperlink));
 
         to_next(&temp);
     }while(temp != a->root);
