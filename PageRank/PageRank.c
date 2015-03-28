@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <unistd.h>
 #include <time.h>
 #include "dubarrays.h"
 #include "twodarrays.h"
@@ -10,16 +11,16 @@
 struct DubArray initialize_graph(struct TwoDArray * a, struct DubArray * no_out);
 struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_0, struct DubArray * v, int * iter);
 void obtain_graph_VE(char * filename, struct TwoDArray * a);
+double dub_abs(double a);
 
 
 int main (){
-	int i, j, max = 0;
 	
 	char filename[15] = "test_graphx.txt";
 	struct TwoDArray temp_array;
-	struct DubArray x_0, start_v, result;
+	struct DubArray x_0, start_v, result, failed;
 	char filenum;
-	char * x_type;
+	char * x_type = (char*)malloc(sizeof(char));
 	double x_vals,fraction;
 	int itercount = 0;
 
@@ -36,7 +37,7 @@ int main (){
 
 	fraction = 1/(double)(temp_array.size);
 
-	if (strcmp(x_type,"e") > 0)
+	if (x_type[1] == 'e')
 	{
 		x_vals = 1;
 	}
@@ -47,16 +48,23 @@ int main (){
 
 	start_v = initialize_vector((int)(temp_array.size), fraction );
 	x_0 = initialize_vector((int)(temp_array.size), x_vals);
+	failed = initialize_vector((int)(temp_array.size), 0);
 
 	clock_t start = clock(), diff;
 	result = get_PageRank(&temp_array, &x_0, &start_v, &itercount);
 	diff = clock() - start;
 	int msec = diff*1000/CLOCKS_PER_SEC;
 
-	printf("\nResult = \n");
+	if(compare_DubArrays(&result,&failed))
+	{
+		printf("The PageRank vector could not converge.\n");
+		return 0;
+	}
+	printf("Result = ");
 	print_DubArray(&result);
+	printf("\n");
 
-	printf("Time to converge = %d.%d s\n", msec/1000,msec%1000 );
+	printf("Time to converge = %5.3f s\n", (double)(msec/1000)+((double)(msec%1000))/1000 );
 	printf("Iterations to converge = %d\n", itercount);
 
 	return 0;
@@ -75,8 +83,9 @@ int main (){
 struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, struct DubArray * v, int * iter)
 {	
 	struct DubArray d,P,ones,x_after;
-	int v_size,m_size,i,k,j = 0; 
-	double w, delta, c, epsilon = 1;
+	int v_size,i,j = 0; 
+	double w, pre_delta, c, epsilon = 1;
+	double  delta = 0;
 	char verbose[3];
 
 	printf("Input damping factor c: ");
@@ -91,8 +100,9 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 		epsilon /= 10;
 	}
 
+	j = 0;
+
 	v_size = (int)(x_before->size);
-	m_size = (int)(pow(v_size,2));
 	ones = initialize_vector(v_size,1);
 	d = initialize_vector(v_size,0);
 	x_after = initialize_vector(v_size,0);
@@ -108,15 +118,17 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 	// P <- cP
 	// P <- c(d x v^T) + P
 	// P <- (1-c)(ones x v^T) + P
-	// scale(&P,c);
-	// alphaxtimesyTplusA(c,&d,v,&P);
+	scale(&P,c);
+	alphaxtimesyTplusA(c,&d,v,&P);
 	alphaxtimesyTplusA((1-c),&ones,v,&P);
 
 	printf("P matrix in use:\n");
 	print_DubMatrix(&P, v_size);
+	printf("\n");
 
 	do
-	{			
+	{	
+		pre_delta = delta;		
 		x_after = alphaATtimesx(c,&P,x_before);
 		w = L1_difference(x_before,&x_after);		
 		alphaxplusy_y(w,v,&x_after);		
@@ -134,18 +146,35 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 			printf("x to end round = \t");
 			print_DubArray(&x_after);
 			printf("delta = %9.7f\n\n",delta );
+			sleep(1);
 		}
 
-	}while(delta > epsilon);
+		// printf("pre_delta - delta = %10.8f\n", dub_abs(pre_delta - delta));
+		// printf("epsilon - delta = %10.8f\n", epsilon - delta );
+
+	}while((delta > epsilon) && (dub_abs(pre_delta - delta) > epsilon/10000));
 
 	// printf("here\n");
+
+	if (delta > epsilon)
+	{
+		x_after = initialize_vector(v_size,0);
+	}
 
 	return x_after;
 
 
 }
 
+double dub_abs(double a)
+{
+	if (a < 0)
+	{
+		a *= -1;
+	}
 
+	return a;
+}
 
 void obtain_graph_VE(char * filename, struct TwoDArray * a)
 {

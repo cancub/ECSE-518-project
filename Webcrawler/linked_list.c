@@ -5,7 +5,15 @@
 #include <unistd.h>
 
 
+void to_next(struct node ** n)
+{
+    *n = (*n)->next;
+}
 
+void to_prev(struct node ** n)
+{
+    *n = (*n)->previous;
+}
 
 void copy_and_append(struct Linked_list * from, struct Linked_list * to)
 {
@@ -44,6 +52,30 @@ void add_node(struct Linked_list * a)
     ((a->root)->previous)->next = new_node;
     (a->root)->previous = new_node;
     a->size += 1;
+}
+
+void append_node(struct Linked_list * a, struct node * n)
+{
+    // printf("a->size = %d\n",a->size );
+    // printf("previous link = %s, next link = %s\n",a->root->previous->hyperlink, a->root->next->hyperlink );
+    if(a->size == 0)
+    {
+        free(a->root);
+        a->root = n;
+        n->previous = n;
+        n->next = n;
+        a->size += 1;
+    }
+    else
+    {        
+        n->previous = (a->root)->previous;
+        n->next = a->root;
+        ((a->root)->previous)->next = n;
+        (a->root)->previous = n;
+        a->size += 1;
+    }
+    // printf("previous link = %s, next link = %s\n",a->root->previous->hyperlink, a->root->next->hyperlink );
+
 }
 
 void add_node_location_data(struct Linked_list* a, int location, int value)
@@ -99,12 +131,14 @@ struct Linked_list * initialize_linked_list(int size)
     struct Linked_list * a = (struct Linked_list *)malloc(sizeof(struct Linked_list));
     int i;
 
-    a->size = 1;
+    a->size = 0;
 
     a->root = (struct node*)malloc(sizeof(struct node));
 
     a->root->next = a->root;
     a->root->previous = a->root;
+
+    // ((a->root)->edges).size == 0;
 
     for(i = 1; i < size; i++)
     {   
@@ -143,6 +177,23 @@ struct node * get_node_at_index(struct Linked_list * a,int index)
         // printf("i = %d, index = %d\n",i, index );
         temp = temp->next;
     }
+
+    return temp;
+}
+
+struct node * pop_node(struct Linked_list * a, int index)
+{
+    struct node * temp = get_node_at_index(a,index);
+
+    if (index == 0)
+    {
+        a->root = (a->root)->next;
+    }
+
+    (temp->previous)->next = temp->next;
+    (temp->next)->previous = temp->previous;
+    temp->next = NULL;
+    temp->previous = NULL;
 
     return temp;
 }
@@ -229,26 +280,10 @@ void delete_linked_list(struct Linked_list * a)
     }
 
     free(a->root);
-
-    // if(temp == temp->next)
-    // {
-    //  printf("here1\n");
-    //  free(a->root);
-    // }
-    // else
-    // {
-    //  printf("here2\n");
-    //  a->root = temp->next;
-    //  (temp->previous)->next = temp->next;
-    //  (temp->next)->previous = temp->previous;
-    //  free(temp);
-    //  delete_linked_list(a);
-    // }
 }
 
 void print_linked_list(struct Linked_list * a)
 {
-    int i = 0;
 
     struct node * temp;
 
@@ -256,8 +291,17 @@ void print_linked_list(struct Linked_list * a)
 
     do
     {
-        printf("node number %d data = %d\n", i++,temp->data );
-        temp = temp->next;
+
+        printf("link[%d] = \t%s",temp->data, (temp->hyperlink));
+
+        if ((int)((temp->edges).size) > 0)
+        {
+            printf(", \tedges = ");
+            print_Array(temp->edges);
+        }
+        printf("\n");
+
+        to_next(&temp);
     }while(temp != a->root);
 }
 
@@ -298,3 +342,22 @@ int get_min(int a, int b) {
 }
 
 
+void concatenate_lists(struct Linked_list * a, struct Linked_list * b)
+{
+
+    int new_size = a->size + b->size;
+    struct node * a_last = a->root->previous;
+    struct node * b_last = b->root->previous;
+
+    a->root->previous = b_last;
+    a_last->next = b->root;
+    b->root->previous = a_last;
+    b_last->next = a->root;
+
+    a->size = new_size;
+
+    free(b->root);
+    free(b);
+
+    // print_linked_list(a);
+}
