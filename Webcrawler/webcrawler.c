@@ -32,6 +32,7 @@ char * clean_link(char * url);
 int search_for_link(struct Linked_list * a, char * filtered_link);
 void print_string(char * string_thing);
 char * rm_invalid(char * url);
+void finish_up(struct Linked_list * parsed);
 
 int index_under_wget = 1;
 char raw_links[] = "raw_links.txt";
@@ -67,11 +68,11 @@ int main()
 
         // print_linked_list(parsed_links);
 
-    }while(index_under_wget <= 80);
+    }while(index_under_wget <= 10);
 
 
 
-    // finish_up(parsed_links);
+    finish_up(parsed_links);
 
 
     // printf("Current parsed list:\n");
@@ -121,42 +122,56 @@ int main()
 
 
 
-// void finish_up(struct Linked_list * queue, struct Linked_list * parsed)
-// {
-//     struct node * temp;
-//     FILE * ifp;    
-//     char link_to_filter[200];
+void finish_up(struct Linked_list * parsed)
+{
+    FILE * ifp;    
+    char link_to_filter[BUFFLEN];
+    int index;
+    char * link_to_wget;
 
-//     //  while there are still links in the queue, we want to crawl each
-//     //  and find which of the links in the current parsed list that it points to
-//     //  and them append this node to the end of the parsed list
-//     while(queue->size > 0)
-//     {   
-//         // get the next link
-//         temp = pop_node(queue,0);
-//         wget_wrapper(temp->hyperlink, raw_links);
+    //  while there are still links in the queue, we want to crawl each
+    //  and find which of the links in the current parsed list that it points to
+    //  and them append this node to the end of the parsed list
+    while(index_under_wget < (parsed->size + 1))
+    {   
+        // get the next link
+        link_to_wget = (get_node_at_index(parsed,index_under_wget-1))->hyperlink;
+        wget_wrapper(link_to_wget, raw_links);
 
-//         ifp = fopen(raw_links,"r");
+        printf("link = %s, number %d of %d\n",link_to_wget, index_under_wget, parsed->size);
+        sleep(1);
 
-//         if(ifp == NULL)
-//         {
-//             printf("Could not open %s for writing\n", raw_links);
-//             exit(0);
-//         }
+        ifp = fopen(raw_links,"r");
 
-//         while(fscanf(ifp,"%s", link_to_filter) == 1)
-//         {
-//             // printf("unfiltered = %s, filtered = %s\n",link_to_filter, remove_extra(link_to_filter));
-//             add_link(temp,link_to_filter, index_under_wget);
-//             // printf("Current queue:\n");
-//             // print_linked_list(a);
-//             // printf("\n");
-//             // sleep(1);
-//         }; 
+        if(ifp == NULL)
+        {
+            printf("Could not open %s for writing\n", raw_links);
+            exit(0);
+        }
 
-//         fclose(ifp);
-//     }
-// }
+        while(fscanf(ifp,"%s", link_to_filter) == 1)
+        {
+
+            if((strstr(link_to_filter,".") != NULL) && (strstr(link_to_filter,"//") != NULL))
+            {
+
+                index = search_for_link(parsed,clean_link(link_to_filter));
+                if(index < parsed->size + 1)
+                {
+                    add_edge(parsed, index_under_wget, index);
+                }
+                // printf("Current queue:\n");
+                // print_linked_list(a);
+                // printf("\n");
+                // sleep(1);
+            }
+        }; 
+
+        fclose(ifp);
+
+        index_under_wget++;
+    }
+}
 
 int search_for_link(struct Linked_list * a, char * filtered_link)
 {
