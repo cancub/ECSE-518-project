@@ -16,22 +16,20 @@ double dub_abs(double a);
 
 int main (){
 	
-	char filename[15] = "test_graphx.txt";
+	char filename[20];
 	struct TwoDArray temp_array;
 	struct DubArray x_0, start_v, result, failed;
-	char filenum;
+	// char filenum;
 	char * x_type = (char*)malloc(sizeof(char));
 	double x_vals,fraction;
 	int itercount = 0;
 
 	construct_2DArray(&temp_array);
 
-	printf("Test graph to use:  ");
-	scanf("%c", &filenum);
+	printf("Enter graph filename: ");
+	scanf("%s", filename);
 	printf("Type of starting x <e>ven/<o>nes: ");
 	scanf("%s", x_type);
-
-	filename[10] = filenum;
 
 	obtain_graph_VE(filename,&temp_array);
 

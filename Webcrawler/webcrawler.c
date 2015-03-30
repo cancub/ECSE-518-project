@@ -68,7 +68,7 @@ int main()
 
         // print_linked_list(parsed_links);
 
-    }while(index_under_wget <= 10);
+    }while(index_under_wget <= 80);
 
 
 
@@ -81,14 +81,20 @@ int main()
     temp = parsed_links->root;
     int i;
 
+    struct TwoDArray graph;
+    construct_2DArray(&graph);
+
     do
-    {
+    {   
+        add_array(&graph);
         fprintf(ofp, "%s %d ", temp->filtered_hyperlink, temp->data);
         if(temp->edges.array[0] != -1)
         {
             fprintf(ofp, "[");
             for(i = 0; i < temp->edges.size; i++)
             {
+                add_element(&(graph.array[(temp->data - 1)]),temp->edges.array[i]);
+
                 if(i < temp->edges.size - 1)
                 {
                     fprintf(ofp, "%d,",temp->edges.array[i] );
@@ -103,7 +109,11 @@ int main()
         fprintf(ofp, "\n");
     }while(temp != parsed_links->root);
 
+    // print_2DArray(&graph);
+    print_2DArray_to_file(&graph, "mcgill_graph.txt");
+
     delete_linked_list(parsed_links);
+    delete_2DArray(&graph);
 
     return 0;
 
@@ -335,7 +345,7 @@ void add_link(struct Linked_list * a, char * link, int from_index)
         }
         else
         {
-            printf("somethign went wrong\n");
+            printf("something went wrong\n");
         }
     }
 }
@@ -382,17 +392,12 @@ void add_edge(struct Linked_list * a, int from_index, int to_index)
 char * remove_extra(char * url)
 {
     
-    char * test = url;
-    int total_size;
+    printf("url = %s\n", url );
 
-    test = strchr(url,'?');
-    // printf("test = %s\n", test );
-
-    if (test != NULL)
+    if (strchr(url,'?') != NULL)
     {
         // printf("before = %s\n",url);
-        total_size = test-url;
-        url[total_size] = '\0';
+        url[strchr(url,'?')-url] = '\0';
         // printf("after = %s\n",url);
     }
 
@@ -405,35 +410,42 @@ void wget_wrapper(char * website, char * outputfile)
     // this is the template for the wget, we replace the x with the url we want to
     // crawl and the y at the very end with the location of the file we are dumping the
     // raw urls into
-    char web_address[BUFFLEN] = "wget -q x -O - | tr \"\\t\\r\\n'\" '   \"' | grep -i -o '\
+    char wget1[] = "wget -q ";
+    char wget2[] = " -O - | tr \"\\t\\r\\n'\" '   \"' | grep -i -o '\
 <a[^>]\\+href[ ]*=[ \\t]*\"\\(ht\\|f\\)tps\\?:[^\"]\\+\"' |\
-sed -e 's/^.*\"\\([^\"]\\+\\)\".*$/\\1/g' > y"; 
+sed -e 's/^.*\"\\([^\"]\\+\\)\".*$/\\1/g' > "; 
 
     // find the relative locations of x an y in the template to determine where to splice
     // in the url and dump file
-    char * after_address = strchr(web_address,'x');
-    int first_copy = after_address - web_address;
-    after_address += sizeof(char);
-    char * after_file = strchr(web_address,'y');
-    int second_copy = after_file - after_address;
-    after_file += sizeof(char); 
+    // char * after_address = strchr(web_address,'x');
+    // int first_copy = after_address - web_address;
+    // after_address += sizeof(char);
+    // char * after_file = strchr(web_address,'y');
+    // int second_copy = after_file - after_address;
+    // after_file += sizeof(char); 
 
-    char final_wget[200];
+    char final_wget[strlen(wget1)+strlen(wget2)+strlen(website)+strlen(outputfile)+1];
 
     // build the full wget command
-    int length = 0;
-    strncpy(final_wget + length*sizeof(char), web_address, first_copy);
-    length += first_copy;
-    strncpy(final_wget + length*sizeof(char), website,strlen(website));
-    length += strlen(website);
-    strncpy(final_wget + length*sizeof(char), after_address, second_copy);
-    length += second_copy;
-    strncpy(final_wget + length*sizeof(char), outputfile, strlen(outputfile));
-    length += strlen(outputfile);
-    strcpy(final_wget + length*sizeof(char), after_file);
+
+    strcat(final_wget,wget1);
+    strcat(final_wget,website);
+    strcat(final_wget,wget2);
+    strcat(final_wget,outputfile);
+
+    // int length = 0;
+    // strncpy(final_wget + length*sizeof(char), web_address, first_copy);
+    // length += first_copy;
+    // strncpy(final_wget + length*sizeof(char), website,strlen(website));
+    // length += strlen(website);
+    // strncpy(final_wget + length*sizeof(char), after_address, second_copy);
+    // length += second_copy;
+    // strncpy(final_wget + length*sizeof(char), outputfile, strlen(outputfile));
+    // length += strlen(outputfile);
+    // strcpy(final_wget + length*sizeof(char), after_file);
 
     // call the wget
-    // printf("%s\n",final_wget );
+    printf("%s\n",final_wget );
     system(final_wget);
 
 }
@@ -476,7 +488,7 @@ char * flip_url(char * url)
 
     char * test = url;
 
-    char * new_host = (char *)malloc(length*sizeof(char));
+    char * new_host = (char *)malloc(length*sizeof(char) + 1);
     
 
 

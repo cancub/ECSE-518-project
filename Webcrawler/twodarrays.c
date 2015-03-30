@@ -27,10 +27,27 @@ void print_2DArray(struct TwoDArray * a)
 	{
 		for(j = 0; j < (a->array[i]).size; j++)
 		{
-			printf("%3d", (a->array[i]).array[j]);
+			printf("%4d", (a->array[i]).array[j]);
 		}
 		printf("\n");
 	}
+}
+
+void print_2DArray_to_file(struct TwoDArray * a, char * location)
+{
+	int i,j;
+
+	FILE * ofp = fopen(location,"w");
+
+	for (i = 0; i < a->size; i++)
+	{
+		for(j = 0; j < (a->array[i]).size; j++)
+		{
+			fprintf(ofp, "%d\t%d\n",i+1,(a->array[i]).array[j]);
+			printf("%d\t%d\n",i+1,(a->array[i]).array[j]);
+		}
+	}
+
 }
 
 void print_Array(struct Array a)
@@ -56,6 +73,18 @@ void construct_2DArray(struct TwoDArray * a)
 	a->array = (struct Array *)malloc(sizeof(struct Array));
 	(a->array[0]).array = (int *)malloc(sizeof(int));
 	(a->array[0]).size = 0;
+
+	printf("here\n");
+}
+
+void delete_2DArray(struct TwoDArray * a)
+{
+	int i;
+
+	for(i = 0; i<a->size; i++)
+	{
+		free((a->array[i]).array);
+	}
 }
 
 void construct_Array(struct Array * a)
@@ -111,3 +140,4 @@ void add_element(struct Array * a, int value)
 	a->array[a->size] = value;
 	a->size += 1;
 }
+

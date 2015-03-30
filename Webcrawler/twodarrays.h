@@ -23,5 +23,7 @@ void construct_Array(struct Array * a);
 void print_2DArray(struct TwoDArray * a);
 void print_Array(struct Array a);
 int search_Array(struct Array a, int value);
+void print_2DArray_to_file(struct TwoDArray * a, char * location);
+void delete_2DArray(struct TwoDArray * a);
 
 #endif
