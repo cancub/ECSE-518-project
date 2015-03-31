@@ -16,7 +16,7 @@ double dub_abs(double a);
 
 int main (){
 	
-	char filename[20];
+	char * filename;
 	struct TwoDArray temp_array;
 	struct DubArray x_0, start_v, result, failed;
 	// char filenum;
@@ -26,10 +26,12 @@ int main (){
 
 	construct_2DArray(&temp_array);
 
-	printf("Enter graph filename: ");
-	scanf("%s", filename);
-	printf("Type of starting x <e>ven/<o>nes: ");
-	scanf("%s", x_type);
+	// printf("Enter graph filename: ");
+	// scanf("%s", filename);
+	filename = "web-Google.txt";
+	// printf("Type of starting x <e>ven/<o>nes: ");
+	// scanf("%s", x_type);
+	x_type = "e";
 
 	obtain_graph_VE(filename,&temp_array);
 
@@ -84,19 +86,22 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 	int v_size,i,j = 0; 
 	double w, pre_delta, c, epsilon = 1;
 	double  delta = 0;
-	char verbose[3];
+	char * verbose;
 
-	printf("Input damping factor c: ");
-	scanf("%lf", &c);
-	printf("Test value epsilon = 1x10^-");
-	scanf("%d", &j);
-	printf("Verbose? <y/n>: ");
-	scanf("%s", verbose);
+	// printf("Input damping factor c: ");
+	// scanf("%lf", &c);
+	c=0.85;
+	// printf("Test value epsilon = 1x10^-");
+	// scanf("%d", &j);
+	// printf("Verbose? <y/n>: ");
+	// scanf("%s", verbose);
+	verbose = "n";
 
-	for (i = 0; i < j; i++)
-	{
-		epsilon /= 10;
-	}
+	// for (i = 0; i < j; i++)
+	// {
+	// 	epsilon /= 10;
+	// }
+	epsilon = 0.0001;
 
 	j = 0;
 
@@ -120,9 +125,11 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 	alphaxtimesyTplusA(c,&d,v,&P);
 	alphaxtimesyTplusA((1-c),&ones,v,&P);
 
-	printf("P matrix in use:\n");
-	print_DubMatrix(&P, v_size);
-	printf("\n");
+	// printf("P matrix in use:\n");
+	// print_DubMatrix(&P, v_size);
+	// printf("\n");
+
+	i = 0;
 
 	do
 	{	
@@ -134,6 +141,8 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 		*x_before = makecopy(&x_after);
 
 		*iter += 1;
+
+		printf("Round %d\n", i++);
 
 		if (verbose[0] == 'y' || verbose[0] == 'Y' || verbose[0] == '\n')
 		{
@@ -186,8 +195,10 @@ void obtain_graph_VE(char * filename, struct TwoDArray * a)
 	}
 	else
 	{
+		printf("here1\n");
 		while(fscanf(ifp, "%d %d", &i, &j) == 2)
 		{
+			printf("i = %d, j = %d\n",i,j);
 
 			if (i > (a->size))
 			{
@@ -195,6 +206,7 @@ void obtain_graph_VE(char * filename, struct TwoDArray * a)
 
 				for(k= 0; k < difference; k++)
 				{
+					printf("k = %d, difference = %d\n",k,difference );
 					add_array(a);
 				}
 			}

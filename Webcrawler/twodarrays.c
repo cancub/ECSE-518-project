@@ -96,7 +96,8 @@ void construct_Array(struct Array * a)
 
 void add_array(struct TwoDArray * a)
 {
-
+	printf("here3\n");
+	printf("a->size = %d\n",(int)(a->size) );
 	if(a->size >= 1)
 	{
 		a->size += 1;
