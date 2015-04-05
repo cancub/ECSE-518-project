@@ -14,7 +14,7 @@ void obtain_graph_VE(char * filename, struct TwoDArray * a);
 double dub_abs(double a);
 
 
-int main (){
+int main (int argc, char *argv[]){
 	
 	char * filename;
 	struct TwoDArray temp_array;
@@ -28,7 +28,14 @@ int main (){
 
 	// printf("Enter graph filename: ");
 	// scanf("%s", filename);
-	filename = "web-Google.txt";
+	if (argc == 2)
+	{
+		filename = argv[1];
+	}
+	else
+	{
+		filename = "web-Google.txt";
+	}
 	// printf("Type of starting x <e>ven/<o>nes: ");
 	// scanf("%s", x_type);
 	x_type = "e";
@@ -195,27 +202,30 @@ void obtain_graph_VE(char * filename, struct TwoDArray * a)
 	}
 	else
 	{
-		printf("here1\n");
+		// printf("here1\n");
 		while(fscanf(ifp, "%d %d", &i, &j) == 2)
 		{
-			printf("i = %d, j = %d\n",i,j);
-
-			if (i > (a->size))
+			if(i < 60000 && j < 60000)
 			{
-				difference = i - (a->size);
+				// printf("i = %d, j = %d, array size = %d\n",i,j, (int)(a->size));
 
-				for(k= 0; k < difference; k++)
+				if (i > (a->size))
 				{
-					printf("k = %d, difference = %d\n",k,difference );
-					add_array(a);
+					difference = i - (a->size) + 1;
+
+					for(k= 0; k < difference; k++)
+					{
+						// printf("k = %d, difference = %d\n",k,difference );
+						add_array(a);
+					}
 				}
-			}
 
-			add_element(a,i-1,j);
+				add_element(a,i,j);
 
-			if (j > max_col)
-			{
-				max_col = j;
+				if (j > max_col)
+				{
+					max_col = j;
+				}
 			}
 
 		}
@@ -230,6 +240,9 @@ void obtain_graph_VE(char * filename, struct TwoDArray * a)
 			add_array(a);
 		}
 	}
+
+	// print_2DArray(a);
+	// exit(1);
 
 	// sleep(1);
 	fclose(ifp);
