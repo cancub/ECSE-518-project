@@ -10,6 +10,12 @@
 
 #define BUFFLEN 2500
 
+struct stringArray
+{
+    char ** array;
+    size_t size;
+};
+
 // NOTE THAT THE FORMAT FOR FILTERED LINKS IS 
 // (completely filtered, extra removed, index of page that pointed to this one)
 
@@ -33,6 +39,9 @@ int search_for_link(struct Linked_list * a, char * filtered_link);
 void print_string(char * string_thing);
 char * rm_invalid(char * url);
 void finish_up(struct Linked_list * parsed);
+void read_and_save(char * raw_links, FILE * ofp, struct stringArray * parsed_links);
+int quick_search(struct stringArray * parsed_links, char * link);
+char * remove_slash(char * link);
 
 int index_under_wget = 1;
 char raw_links[] = "raw_links.txt";
@@ -40,18 +49,21 @@ char raw_links[] = "raw_links.txt";
 int main()
 {
     char * link; 
-    struct Linked_list * parsed_links;
-    struct node * temp;
+    struct stringArray parsed_links;
+    // struct node * temp;
     FILE * ofp = fopen("output.txt","w");
 
-    char starter[] = "http://www.mcgill.ca";    // the starting node
+    char starter[] = "www.mcgill.ca";    // the starting node
 
     //initialize linked lists
-    parsed_links = initialize_linked_list(1);
+    // parsed_links = initialize_linked_list(1);
+    parsed_links.size = 1;
+    parsed_links.array = (char **)malloc(sizeof(char *) * 1000);
+    parsed_links.array[0] = remove_extra(remove_slash(starter));
 
     link = starter;
 
-    add_link(parsed_links,link,index_under_wget);
+    // add_link(parsed_links,link,index_under_wget);
 
     do
     {        
@@ -60,60 +72,76 @@ int main()
 
         wget_wrapper(link, raw_links);
 
-        filter_and_store(raw_links, parsed_links);
+        printf("here in main\n");
+
+        read_and_save(raw_links,ofp, &parsed_links);
+
+        // printf("ici\n");
+
+        // filter_and_store(raw_links, parsed_links);
 
         index_under_wget++;
 
-        link = (get_node_at_index(parsed_links,index_under_wget-1))->hyperlink;
+        link = parsed_links.array[index_under_wget-1];
+
+        // link = (get_node_at_index(parsed_links,index_under_wget-1))->hyperlink;
 
         // print_linked_list(parsed_links);
 
-    }while(index_under_wget <= 80);
+    }while(index_under_wget <= 1);
 
 
+    fclose(ofp);
 
-    finish_up(parsed_links);
+    // finish_up(parsed_links);
 
 
     // printf("Current parsed list:\n");
     // print_linked_list(parsed_links);
 
-    temp = parsed_links->root;
-    int i;
+    // temp = parsed_links->root;
+    // int i;
 
-    struct TwoDArray graph;
-    construct_2DArray(&graph);
+    // struct TwoDArray graph;
+    // construct_2DArray(&graph);
 
-    do
-    {   
-        add_array(&graph);
-        fprintf(ofp, "%s %d ", temp->filtered_hyperlink, temp->data);
-        if(temp->edges.array[0] != -1)
-        {
-            fprintf(ofp, "[");
-            for(i = 0; i < temp->edges.size; i++)
-            {
-                add_element(&(graph.array[(temp->data - 1)]),temp->edges.array[i]);
+    // do
+    // {   
+    //     add_array(&graph);
+    //     fprintf(ofp, "%s %d ", temp->filtered_hyperlink, temp->data);
+    //     if(temp->edges.array[0] != -1)
+    //     {
+    //         fprintf(ofp, "[");
+    //         for(i = 0; i < temp->edges.size; i++)
+    //         {
+    //             add_element(&(graph.array[(temp->data - 1)]),temp->edges.array[i]);
 
-                if(i < temp->edges.size - 1)
-                {
-                    fprintf(ofp, "%d,",temp->edges.array[i] );
-                }
-                else
-                {
-                    fprintf(ofp, "%d] ",temp->edges.array[i] );
-                }
-            }
-        }
-        temp = temp->next;
-        fprintf(ofp, "\n");
-    }while(temp != parsed_links->root);
+    //             if(i < temp->edges.size - 1)
+    //             {
+    //                 fprintf(ofp, "%d,",temp->edges.array[i] );
+    //             }
+    //             else
+    //             {
+    //                 fprintf(ofp, "%d] ",temp->edges.array[i] );
+    //             }
+    //         }
+    //     }
+    //     temp = temp->next;
+    //     fprintf(ofp, "\n");
+    // }while(temp != parsed_links->root);
 
     // print_2DArray(&graph);
-    print_2DArray_to_file(&graph, "mcgill_graph.txt");
+    // print_2DArray_to_file(&graph, "mcgill_graph.txt");
 
-    delete_linked_list(parsed_links);
-    delete_2DArray(&graph);
+    // delete_linked_list(parsed_links);
+    // delete_2DArray(&graph);
+
+    int j = 0;
+
+    for (;j < parsed_links.size; j++)
+    {
+        free(parsed_links.array[j]);
+    }
 
     return 0;
 
@@ -130,7 +158,122 @@ int main()
 //functions
 
 
+void read_and_save(char * raw_links, FILE * ofp, struct stringArray * parsed_links)
+{
+    // open the raw links file from wget
+    FILE * ifp = fopen(raw_links,"r");
+    char * link = NULL;
+    char * newlink;
+    int to_index, from_index = index_under_wget;
+    size_t nbytes;
 
+    if(ifp == NULL)
+    {
+        printf("Could not open %s for writing\n", raw_links);
+        exit(0);
+    }
+
+    printf("here in read and save\n");
+
+    while(getline(&link,&nbytes,ifp) != -1)
+    {
+        newlink = remove_slash(remove_extra(link));
+
+        printf("link = %s\n",newlink);
+
+        to_index = quick_search(parsed_links,newlink);
+
+        printf("to_index = %d\n", to_index);
+
+        if(to_index != 0)
+        {
+            //we have an existing link
+            fprintf(ofp, "%d\t%d\n",from_index,to_index );
+
+            printf("printing to file existing edge: %d\t%d\n", from_index,to_index);
+        }
+        else
+        {
+            parsed_links->size += 1;
+            to_index = parsed_links->size;
+            parsed_links->array = (char **)realloc(parsed_links->array, sizeof(char *) * (parsed_links->size));
+            (parsed_links->array)[to_index - 1] = newlink;
+            fprintf(ofp, "%d\t%d\n",from_index,to_index );
+
+            printf("printing to file new edge: %d\t%d\n", from_index,to_index);
+
+        }
+        link = NULL;
+    }
+
+
+    fclose(ifp);
+}
+
+int quick_search(struct stringArray * parsed_links, char * link)
+{
+    int i,j;
+    int length = strlen(link);
+    int found = 0;
+    char * testlink;
+
+    for(i = 0;i<parsed_links->size;i++)
+    {
+        testlink = parsed_links->array[i];
+        printf("test = %s, link = %s\n",testlink,link );
+        if((int)strlen(testlink) == length)
+        {
+            for(j = 0; j < length; j++)
+            {
+                if(testlink[j] != link[j])
+                {
+                    break;
+                }
+            }
+
+            if(j == length)
+            {
+                found = 1;
+                return i + 1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+char * remove_slash(char * link)
+{
+
+    char * result;
+
+    // printf("here in remove s\n");
+
+    if (link[strlen(link)-1] == '/')
+    {
+        // int i = 0;
+
+        // printf("url = %s\n", url);
+        // printf("new_url = %s\n", newurl);
+
+        result = (char *)malloc(strlen(link));
+
+        strncpy(result,link,strlen(link)-1);
+        result[strlen(link)-1] = '\0';
+
+        // printf("result = %s.\n", result);
+    }
+    else
+    {
+        result = link;
+    }
+
+    // free(link);
+
+
+    return result;
+
+}
 
 void finish_up(struct Linked_list * parsed)
 {
@@ -391,17 +534,42 @@ void add_edge(struct Linked_list * a, int from_index, int to_index)
 
 char * remove_extra(char * url)
 {
-    
-    printf("url = %s\n", url );
+    // printf("url = %s\n", url );
 
-    if (strchr(url,'?') != NULL)
+    char * result;
+
+    printf("here in remove extra\n");
+
+    if (strchr(url,'\n') != NULL)
     {
-        // printf("before = %s\n",url);
-        url[strchr(url,'?')-url] = '\0';
-        // printf("after = %s\n",url);
+
+
+        char * newurl = strstr(url,"//") + 2;
+        int i = 0;
+
+        // printf("url = %s\n", url);
+        // printf("new_url = %s\n", newurl);
+
+        result = (char *)malloc(strlen(newurl));
+
+        while(newurl[i] != '\n')
+        {
+            result[i] = newurl[i];
+            // printf("newurl[%d] = %c\n", i, newurl[i]);
+            i++;
+        }
+        result[i] = '\0';
+
+        // printf("result = %s.\n", result);
+    }
+    else
+    {
+        result = url;
     }
 
-    return url;
+
+    return result;
+
 }
 
 void wget_wrapper(char * website, char * outputfile)
@@ -410,8 +578,8 @@ void wget_wrapper(char * website, char * outputfile)
     // this is the template for the wget, we replace the x with the url we want to
     // crawl and the y at the very end with the location of the file we are dumping the
     // raw urls into
-    char wget1[] = "wget -q ";
-    char wget2[] = " -O - | tr \"\\t\\r\\n'\" '   \"' | grep -i -o '\
+    char wget1[] = "wget -q \'";
+    char wget2[] = "\' -O - | tr \"\\t\\r\\n'\" '   \"' | grep -i -o '\
 <a[^>]\\+href[ ]*=[ \\t]*\"\\(ht\\|f\\)tps\\?:[^\"]\\+\"' |\
 sed -e 's/^.*\"\\([^\"]\\+\\)\".*$/\\1/g' > "; 
 
@@ -532,7 +700,6 @@ char * flip_url(char * url)
         {
             do
             {
-                // printf("here\n");
                 //find the last dot before the path. this immediately precedes the top level domain.
                 test = strchr(&(test[1]),'.');
                 // printf("test = %s\n", test);
@@ -636,7 +803,6 @@ char * flip_url(char * url)
 
         do
         {
-            // printf("here\n");
             //find the last dot before the path. this immediately precedes the top level domain.
             test = strchr(&(test[1]),'.');
             // printf("test = %s\n", test);
