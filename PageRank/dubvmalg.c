@@ -6,13 +6,18 @@
 
 double differce_vector_length(struct DubArray * x1,struct DubArray * x0)
 {
+	double result;
 	struct DubArray temp = makecopy(x1);
 	// printf("copying vector = \t");
 	// print_DubArray(&temp);
 
 	alphaxplusy_y(-1,x0,&temp);
 
-	return cblas_dasum(temp.size,temp.array,1);
+	result = cblas_dasum(temp.size,temp.array,1);
+
+	free(temp.array);
+
+	return result;
 }
 
 struct DubArray makecopy(struct DubArray * a)

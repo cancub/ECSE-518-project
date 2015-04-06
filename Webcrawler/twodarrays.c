@@ -77,7 +77,7 @@ void construct_2DArray(struct TwoDArray * a)
 	printf("here\n");
 }
 
-void delete_2DArray(struct TwoDArray * a)
+void destruct_2DArray(struct TwoDArray * a)
 {
 	int i;
 
@@ -85,6 +85,8 @@ void delete_2DArray(struct TwoDArray * a)
 	{
 		free((a->array[i]).array);
 	}
+
+	free(a->array);
 }
 
 void construct_Array(struct Array * a)

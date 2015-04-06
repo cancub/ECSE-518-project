@@ -21,7 +21,7 @@ int main (int argc, char *argv[]){
 	struct TwoDArray temp_array;
 	struct DubArray x_0, start_v, result, failed;
 	// char filenum;
-	char * x_type = (char*)malloc(sizeof(char));
+	// char * x_type = (char*)malloc(sizeof(char));
 	double x_vals,fraction;
 	int itercount = 0;
 
@@ -40,16 +40,16 @@ int main (int argc, char *argv[]){
 	}
 	// printf("Type of starting x <e>ven/<o>nes: ");
 	// scanf("%s", x_type);
-	x_type = "e";
+	// x_type = "e";
 
 	obtain_graph_VE(filename,&temp_array);
 
-	print_2DArray(&temp_array);
-	sleep(1);
+	// print_2DArray(&temp_array);
+	// sleep(1);
 
 	fraction = 1/(double)(temp_array.size);
 
-	if (x_type[1] == 'e')
+	if (0 /*x_type[1] == 'e'*/)
 	{
 		x_vals = 1;
 	}
@@ -57,6 +57,8 @@ int main (int argc, char *argv[]){
 	{
 		x_vals = fraction;
 	}
+
+	// free(x_type);
 
 	start_v = initialize_vector((int)(temp_array.size), fraction );
 	x_0 = initialize_vector((int)(temp_array.size), x_vals);
@@ -67,19 +69,27 @@ int main (int argc, char *argv[]){
 	diff = clock() - start;
 	int msec = diff*1000/CLOCKS_PER_SEC;
 
+	free(start_v.array);
+	free(x_0.array);
+
 	if(compare_DubArrays(&result,&failed))
 	{
 		printf("The PageRank vector could not converge.\n");
 		return 0;
 	}
+
+	free(failed.array);
+
 	printf("Result = ");
-	print_DubArray(&result);
+	// print_DubArray(&result);
 	print_order(&result);
-	printf("\n");
+	// printf("\n");
+	// sleep(3);
 
 	printf("Time to converge = %5.3f s\n", (double)(msec/1000)+((double)(msec%1000))/1000 );
 	printf("Iterations to converge = %d\n", itercount);
 
+	free(result.array);
 	destruct_2DArray(&temp_array);
 
 	return 0;
@@ -101,7 +111,7 @@ void print_order(struct DubArray * a)
 	int max_index = 0;
 
 	// we will use this to store the indices we've already printed
-	int * printed = (int *)malloc((int)(a->size));
+	int * printed = (int *)malloc((int)(a->size)*sizeof(int));
 
 	// while there are still indices left to print
 	for(k = 0; k < a->size; k++)
@@ -132,10 +142,14 @@ void print_order(struct DubArray * a)
 		}		
 
 		printed[k] = max_index;
-		printf("%d\n",max_index+1);
+		printf("%d ",max_index+1);
 
 		maxval = 0;
 	}
+
+	free(printed);
+
+	printf("\n");
 
 }
 
@@ -193,11 +207,14 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 
 	do
 	{	
+
+		free(x_after.array);
 		pre_delta = delta;		
 		x_after = alphaATtimesx(c,&P,x_before);
 		w = L1_difference(x_before,&x_after);		
 		alphaxplusy_y(w,v,&x_after);		
 		delta = differce_vector_length(&x_after,x_before);
+		free((*x_before).array);
 		*x_before = makecopy(&x_after);
 
 		*iter += 1;
@@ -213,6 +230,8 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 			printf("delta = %9.7f\n\n",delta );
 			sleep(1);
 		}
+		// free(x_after);
+
 
 		// printf("pre_delta - delta = %10.8f\n", dub_abs(pre_delta - delta));
 		// printf("epsilon - delta = %10.8f\n", epsilon - delta );
@@ -225,6 +244,10 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 	{
 		x_after = initialize_vector(v_size,0);
 	}
+
+	free(ones.array);
+	free(d.array);
+	free(P.array);
 
 	return x_after;
 
