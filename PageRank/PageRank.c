@@ -12,6 +12,7 @@ struct DubArray initialize_graph(struct TwoDArray * a, struct DubArray * no_out)
 struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_0, struct DubArray * v, int * iter);
 void obtain_graph_VE(char * filename, struct TwoDArray * a);
 double dub_abs(double a);
+void print_order(struct DubArray * result);
 
 
 int main (int argc, char *argv[]){
@@ -30,6 +31,7 @@ int main (int argc, char *argv[]){
 	// scanf("%s", filename);
 	if (argc == 2)
 	{
+		
 		filename = argv[1];
 	}
 	else
@@ -41,6 +43,9 @@ int main (int argc, char *argv[]){
 	x_type = "e";
 
 	obtain_graph_VE(filename,&temp_array);
+
+	print_2DArray(&temp_array);
+	sleep(1);
 
 	fraction = 1/(double)(temp_array.size);
 
@@ -69,10 +74,13 @@ int main (int argc, char *argv[]){
 	}
 	printf("Result = ");
 	print_DubArray(&result);
+	print_order(&result);
 	printf("\n");
 
 	printf("Time to converge = %5.3f s\n", (double)(msec/1000)+((double)(msec%1000))/1000 );
 	printf("Iterations to converge = %d\n", itercount);
+
+	destruct_2DArray(&temp_array);
 
 	return 0;
 
@@ -85,6 +93,51 @@ int main (int argc, char *argv[]){
 
 
 // functions
+
+void print_order(struct DubArray * a)
+{
+	int i,j,k;
+	double maxval = 0;
+	int max_index = 0;
+
+	// we will use this to store the indices we've already printed
+	int * printed = (int *)malloc((int)(a->size));
+
+	// while there are still indices left to print
+	for(k = 0; k < a->size; k++)
+	{
+		// find the next index for testing
+		for (i = 0; i < a->size; i++)
+		{
+
+			// cycle through the array of printed indices to see if this
+			// one has already been printed
+			for(j = 0; j < k; j++)
+			{
+				// printf("i = %d, j = %d,k = %d, printed[%d] = %d\n",i,j,k,j,printed[j] );
+				if(printed[j] == i)
+				{
+					break;
+				}
+			}
+
+			// printf("a->array[%d] = %f, maxval = %f, max_index = %d \n", i,a->array[i],maxval,max_index);
+			if((a->array[i] > maxval) && (j == k))
+			{
+				maxval = a->array[i];
+				max_index = i;
+			}
+
+			// usleep(6000);
+		}		
+
+		printed[k] = max_index;
+		printf("%d\n",max_index+1);
+
+		maxval = 0;
+	}
+
+}
 
 
 struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, struct DubArray * v, int * iter)
@@ -149,11 +202,9 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 
 		*iter += 1;
 
-		printf("Round %d\n", i++);
-
 		if (verbose[0] == 'y' || verbose[0] == 'Y' || verbose[0] == '\n')
 		{
-			printf("---------------------------------------------------------\n round %d\n",j++);
+			printf("---------------------------------------------------------\n Round %d\n",i++);
 			printf("x to start round = \t");
 			print_DubArray(x_before);
 			printf("w = %6.4f\n", w );
@@ -194,24 +245,32 @@ void obtain_graph_VE(char * filename, struct TwoDArray * a)
 {
 	
 	int i,j,k, difference, max_col = 0;
+	// struct Array current_vertex;
+	// open the file containing the graph
 	FILE * ifp = fopen(filename,"r");
-
 	if (ifp == NULL)
 	{
+		// let the caller know an error occured
 		fprintf(stderr, "Cannot open file %s\n", filename);
 	}
 	else
 	{
 		// printf("here1\n");
+		// we have successfully opened the file
 		while(fscanf(ifp, "%d %d", &i, &j) == 2)
 		{
+			// there should be two values listed in this directed graph on each line
+			// i = from
+			// j = to
 			if(i < 60000 && j < 60000)
 			{
 				// printf("i = %d, j = %d, array size = %d\n",i,j, (int)(a->size));
 
+				// we need to add arrays for both this new node and the nodes
+				// that we may have skipped (to make a complete vector)
 				if (i > (a->size))
 				{
-					difference = i - (a->size) + 1;
+					difference = i - (a->size);
 
 					for(k= 0; k < difference; k++)
 					{
@@ -220,13 +279,20 @@ void obtain_graph_VE(char * filename, struct TwoDArray * a)
 					}
 				}
 
-				add_element(a,i,j);
+				add_element(a,i-1,j);
+				// printf("current size = %d\n",(int)((a->array[i-1]).size));
+				// printf("\n\n");
+				// sleep(1);
 
 				if (j > max_col)
 				{
 					max_col = j;
 				}
 			}
+
+			// print_2DArray(a);
+
+			// sleep(1);
 
 		}
 	}

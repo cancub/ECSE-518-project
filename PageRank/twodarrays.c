@@ -10,7 +10,7 @@ void print_2DArray(struct TwoDArray * a)
 
 	for (i = 0; i < a->size; i++)
 	{
-		printf("%d: ",i);
+		printf("%d: ",i+1);
 		if((a->array[i]).size != 0)
 		{
 			for(j = 0; j < (a->array[i]).size; j++)
@@ -34,6 +34,18 @@ void construct_2DArray(struct TwoDArray * a)
 	(a->array[0]).size = 0;
 }
 
+void destruct_2DArray(struct TwoDArray * a)
+{
+	int i;
+
+	for(i = 0; i < a->size; i++)
+	{
+		free((a->array[i]).array);
+	}
+
+	free(a->array);
+}
+
 void add_array(struct TwoDArray * a)
 {
 	
@@ -43,34 +55,43 @@ void add_array(struct TwoDArray * a)
 	{
 		a->size += 1;
 		// printf("a->size = %d\n",(int)(a->size) );
-		// printf("here\n");
 		a->array = (struct Array *)realloc(a->array, a->size * sizeof(struct Array));
+		// printf("here\n");
 		(a->array[a->size-1]).array = (int *)malloc(sizeof(int));
 		(a->array[a->size-1]).size = 0;
+
 		// printf("a->array[a->size-1 = %d]).size = %d\n", (int)(a->size-1), (int)((a->array[a->size-1]).size));
 	}
 	else
 	{
 		a->size = 1;
+		// printf("a->array[a->size-1 = %d]).size = %d\n", (int)(a->size-1), (int)((a->array[a->size-1]).size));
 	}
+
+	// printf("\n\n");
 }
 
-void add_element(struct TwoDArray * a, int n, int value)
+void add_element(struct TwoDArray * a,int from, int value)
 {
-	// printf("a->array[n = %d]).size = %d\n", n, (int)((a->array[n]).size));
+	struct Array * pArray = &((a->array[from]));
 
-	if((a->array[n]).size >= 1)
+	if(pArray->size >= 1)
 	{	
-		(a->array[n]).size += 1;
-		(a->array[n]).array = (int *)realloc((a->array[n]).array,(a->array[n]).size * sizeof(int));
-		(a->array[n]).array[(a->array[n]).size - 1] = value;
+		pArray->size += 1;
+		pArray->array = (int *)realloc(pArray->array,(int)(pArray->size) * sizeof(int));
+		(pArray->array)[(int)(pArray->size - 1)] = value;
 	}
 	else
 	{
-		// printf("from = %d, to = %d\n",n,value );
-		(a->array[n]).array[(a->array[n]).size] = value;
-		(a->array[n]).size += 1;	
+		// printf("to = %d\n",value );
+		(pArray->array)[pArray->size] = value;
+		// printf("((a->array[from])->array)[(a->array[from])->size = %d] = %d\n",(int)((a->array[from])->size),((a->array[from])->array)[(a->array[from])->size]);
+		pArray->size += 1;
+		// printf("(a->array[from])->size = %d\n",(int)((a->array[from])->size) );
 	}
 
-	// printf("a->array[n = %d].size = %d, value = %d\n",n,(int)((a->array[n]).size),value );
+	// printf("pointer[%d] = %d\n", (int)(pArray->size), (pArray->array)[(int)(pArray->size) -1] );
+
+	// free(pArray);
+
 }
