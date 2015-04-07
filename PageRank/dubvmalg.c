@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <math.h>
 
 double differce_vector_length(struct DubArray * x1,struct DubArray * x0)
 {
@@ -58,6 +59,7 @@ void scale(struct DubArray * x, double scale)
 
 void alphaxplusy_y(double alpha, struct DubArray * x, struct DubArray * y)
 {
+	// y is altered to be alpha*x+y, x remains unaltered
 	cblas_daxpy(x->size,alpha,x->array,1,y->array,1);
 }
 
@@ -77,4 +79,24 @@ void alphaxtimesyTplusA(double alpha, struct DubArray * x, struct DubArray * y, 
 	lenx = x->size;
 
 	cblas_dger(CblasRowMajor,lenx,leny,alpha,x->array,incx,y->array,incy,A->array,lda);
+}
+
+void detect_converged(struct DubArray * before, struct DubArray * after, double espilon, int ** N, struct DubArray * A)
+{
+	int i;
+	int n = (int)(before->size);
+	alphaxplusy_y(-1,before,after);
+	double * zeros = (double *)calloc(n,sizeof(double));
+	for(i = 0; i < after->size;i++)
+	{
+
+		if (fabs(after->array[i]/before->array[i]) < espilon)
+		{
+			after->array[i] = 0;	// this element has converged
+			(*N)[i] = 0;
+			cblas_dcopy(n,zeros,1,&(A->array[i*n]),1);
+		}
+	}
+
+	free(zeros);
 }

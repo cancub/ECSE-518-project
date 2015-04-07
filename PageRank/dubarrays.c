@@ -65,6 +65,11 @@ void print_DubArray(struct DubArray * a)
 	printf("\n");
 }
 
+// void mtranspose(struct DubArray * a)
+// {
+	
+// }
+
 struct DubArray initialize_vector(int length, double value)
 {
 	// printf("here1\n");

@@ -14,6 +14,7 @@
 #define COMPLETED       1
 #define NOT_COMPLETED   0
 #define STARTLINKS      1500
+#define WAITTIME        400
 
 struct stringArray
 {
@@ -34,9 +35,7 @@ char * add_slash(char * url);
 void * wget_wrapper(void * arg);
 void crawl_page(char * inputfile, char * newinputfile, char * parsed_links, char * raw_links);
 char * remove_extra(char * url);
-char * append_directory(char * filename);
 void filter_and_store(char * raw, struct Linked_list * a);
-char * get_next_link(struct Linked_list * parsed);
 void add_edge(struct Linked_list * a, int from_index, int to_index);
 void add_link(struct Linked_list * a, char * link, int index);
 char * clean_link(char * url);
@@ -72,7 +71,7 @@ int main()
         return(-1);
     }
 
-    char * starter = "http://www.mcgill.ca";    // the starting node
+    char * starter = "http://www.mcgill.ca/crawlers";    // the starting node
 
     FILE * clean = fopen(filtered,"w");
     fprintf(clean, "%s\n",starter );
@@ -105,7 +104,7 @@ int main()
             thread_test = NOT_COMPLETED;
             pthread_create(&wget_main,NULL,wget_wrapper,link);
 
-            while((thread_test == NOT_COMPLETED) && count < 200)
+            while((thread_test == NOT_COMPLETED) && count < WAITTIME)
             {
                 usleep(100000);
                 // printf("%d ",count );
@@ -114,7 +113,7 @@ int main()
 
             // printf("\n");
 
-            if (count == 200)
+            if (count == WAITTIME)
             {
                 pthread_cancel(wget_main);
                 printf("Retrying...\n");
@@ -300,7 +299,9 @@ void read_and_save(char * raw_links, FILE * ofp, struct stringArray * parsed_lin
 
         int * possible_array = (int *)malloc(sizeof(int)*lines);
 
-        char * redirected_link;
+        char * redirected_link = NULL;
+
+        char * test_link = NULL;
 
     
         while(getline(&link,&nbytes,ifp) != -1)
@@ -314,24 +315,26 @@ void read_and_save(char * raw_links, FILE * ofp, struct stringArray * parsed_lin
             // printf("\n");
 
             // printf("here in read and save\n");
+
             free(newlink);
-            newlink = remove_extra(link);
+            free(test_link);
+            newlink = NULL;
+            test_link = remove_extra(link);
             // free(link);
 
             // printf("testing %s\n", link);
 
 
-            if((strstr(newlink,"//goo.gl") != NULL) || (strstr(newlink,"//tinyurl") != NULL) ||
-                (strstr(newlink,"//t.co") != NULL) || (strstr(newlink,"//x.co") != NULL)||
-                (strstr(newlink,"//is.gd") != NULL) || (strstr(newlink,"//bit.ly") != NULL))
+            if((strstr(test_link,"//goo.gl") != NULL) || (strstr(test_link,"//tinyurl") != NULL) ||
+                (strstr(test_link,"//t.co") != NULL) || (strstr(test_link,"//x.co") != NULL)||
+                (strstr(test_link,"//is.gd") != NULL) || (strstr(test_link,"//bit.ly") != NULL))
             {
-                printf("Testing for redirect: %s\n",newlink);
+                printf("Testing for redirect: %s\n",test_link);
 
-                redirected_link = redirected(newlink);
+                redirected_link = redirected(test_link);
 
                 if(redirected_link != NULL)
                 {
-                    free(newlink);
                     newlink = remove_extra(redirected_link);
                     free(redirected_link);
                     printf("Changing to %s\n",newlink);
@@ -342,6 +345,9 @@ void read_and_save(char * raw_links, FILE * ofp, struct stringArray * parsed_lin
                     printf("Not redirected\n");
                 }
             }
+
+            if (newlink == NULL)                              
+                newlink = remove_extra(link);
             
 
             // printf("link from file = %s\n",newlink);
@@ -387,8 +393,12 @@ void read_and_save(char * raw_links, FILE * ofp, struct stringArray * parsed_lin
                     to_index = parsed_links->size;
                     parsed_links->array = (char **)realloc(parsed_links->array, sizeof(char *) * (parsed_links->size));
                     // printf("Adding %s to index %d. String size = %d\n",newlink, to_index,(int)(strlen(newlink)) );
-                    (parsed_links->array)[to_index - 1] = (char *)malloc((int)(strlen(newlink))+1);
-                    strcpy((parsed_links->array)[to_index - 1], newlink);
+                    (parsed_links->array)[to_index - 1] = (char *)malloc((int)(strlen(newlink))+2);
+                    if((parsed_links->array)[to_index - 1] == NULL)
+                    {
+                        printf("Error in allocating memory for links\n");
+                    }
+                    memcpy((parsed_links->array)[to_index - 1], newlink, strlen(newlink)+1);
                     fprintf(ofp, "%d\t%d\n",from_index,to_index );
                     fprintf(filtered, "%s\n", newlink);   
 
@@ -563,7 +573,7 @@ void finish_up(struct stringArray * parsed, FILE * ofp, char * raw_links, char *
             thread_test = NOT_COMPLETED;
             pthread_create(&wget_finishing,NULL,wget_wrapper,(parsed->array)[index_under_wget-1]);
 
-            while((thread_test == NOT_COMPLETED) && count < 200)
+            while((thread_test == NOT_COMPLETED) && count < WAITTIME)
             {
                 usleep(100000);
                 // printf("%d ",count );
@@ -572,7 +582,7 @@ void finish_up(struct stringArray * parsed, FILE * ofp, char * raw_links, char *
 
             // printf("\n");
 
-            if (count == 200)
+            if (count == WAITTIME)
             {
                 pthread_cancel(wget_finishing);
                 // pthread_join(wget)
