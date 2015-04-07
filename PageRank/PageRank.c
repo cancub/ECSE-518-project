@@ -110,6 +110,13 @@ void print_order(struct DubArray * a)
 	double maxval = 0;
 	int max_index = 0;
 
+	FILE * ofp = fopen("ranks.txt","w");
+	if (ofp == NULL)
+	{
+		printf("Error in opening ranks.txt\n");
+		exit(0);
+	}
+
 	// we will use this to store the indices we've already printed
 	int * printed = (int *)malloc((int)(a->size)*sizeof(int));
 
@@ -143,11 +150,14 @@ void print_order(struct DubArray * a)
 
 		printed[k] = max_index;
 		printf("%d ",max_index+1);
+		fprintf(ofp, "%d\n",max_index+1 );
 
 		maxval = 0;
 	}
 
 	free(printed);
+
+	fclose(ofp);
 
 	printf("\n");
 

@@ -8,8 +8,11 @@
 #include <errno.h>
 #include <pthread.h>
 #include "linked_list.h"
+#include <curl/curl.h>
 
-#define BUFFLEN 2500
+#define BUFFLEN         2500
+#define COMPLETED       1
+#define NOT_COMPLETED   0
 
 struct stringArray
 {
@@ -44,15 +47,19 @@ void read_and_save(char * raw_links, FILE * ofp, struct stringArray * parsed_lin
 int quick_search(struct stringArray * parsed_links, char * link);
 char * remove_slash(char ** link);
 void print_links(struct stringArray * list);
+char * redirected(char * original);
 
 int index_under_wget = 1;
 char raw_links[] = "raw_links.txt";
+
+int thread_test;
 
 int main()
 {
     char * link; 
     struct stringArray parsed_links;
     pthread_t wget_main;
+    int count, retries;
     // struct node * temp;
     FILE * ofp = fopen("output.txt","w");
 
@@ -84,11 +91,41 @@ int main()
 
     do
     {        
-        printf("\n-----------------------\n\nRound %d:\n", index_under_wget);
-        printf("looking at link %s at index %d\n",link, index_under_wget);
+        printf("\n-----------------------\n\nRound %d of %d:\n", index_under_wget,(int)(parsed_links.size));
+        printf("looking at link %s\n",link);
 
-        pthread_create(&wget_main,NULL,wget_wrapper,link);
-        pthread_join(wget_main,NULL);
+        retries = 1;
+
+        while(retries >= 0)
+        {
+
+            count = 0;
+
+            thread_test = NOT_COMPLETED;
+            pthread_create(&wget_main,NULL,wget_wrapper,link);
+
+            while((thread_test == NOT_COMPLETED) && count < 200)
+            {
+                usleep(100000);
+                // printf("%d ",count );
+                count++;
+            }
+
+            // printf("\n");
+
+            if (count == 200)
+            {
+                pthread_cancel(wget_main);
+                printf("Retrying...\n");
+                retries--;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        // pthread_join(wget_main,NULL);
         // wget_wrapper(link, raw_links);
 
         // printf("here in main\n");
@@ -107,7 +144,7 @@ int main()
 
         // print_linked_list(parsed_links);
 
-    }while(index_under_wget <= 3);
+    }while(index_under_wget <= 400);
 
     // sleep(5);
 
@@ -137,6 +174,69 @@ int main()
 
 //
 //functions
+
+char * redirected(char * original)
+{
+    CURL *curl;
+    CURLcode curl_res;
+    char * result = NULL;
+
+    curl_global_init(CURL_GLOBAL_ALL);
+
+    curl = curl_easy_init();
+
+    if (curl)
+    {
+        curl_easy_setopt(curl, CURLOPT_URL, original);
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+        curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
+        // curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)"); 
+
+        /* Perform the request, curl_res will get the return code */ 
+        curl_res = curl_easy_perform(curl);
+        // printf("here\n");
+
+        /* Check for errors */ 
+        if(curl_res != CURLE_OK)
+            fprintf(stderr, "curl_easy_perform() failed: %s\n",
+                curl_easy_strerror(curl_res));
+
+        if(CURLE_OK == curl_res) 
+        {
+            char *url;
+            curl_res = curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &url);
+
+            if((CURLE_OK == curl_res) && url)
+            {
+                // curl_res = curl_easy_getinfo(curl,CURLINFO_RESPONSE_CODE,code);
+                if(strcmp(url,original) != 0)
+                {
+                    result = (char *)malloc(strlen(url) + 1);
+
+                    strcpy(result,url);
+                }
+                // else
+                // {   
+                //     // printf("No redirect, using ...%s...\n",newlink);
+                // }
+            }
+        }
+
+        /* always cleanup */ 
+        curl_easy_cleanup(curl);
+
+        /* we're done with libcurl, so clean it up */ 
+        curl_global_cleanup();
+
+    }
+    else
+    {
+        printf("cURL error.\n");
+    }
+
+    return result;
+
+}
 
 
 void read_and_save(char * raw_links, FILE * ofp, struct stringArray * parsed_links, char * filtered_links, int add_links)
@@ -194,6 +294,8 @@ void read_and_save(char * raw_links, FILE * ofp, struct stringArray * parsed_lin
 
         int * possible_array = (int *)malloc(sizeof(int)*lines);
 
+        char * redirected_link;
+
     
         while(getline(&link,&nbytes,ifp) != -1)
         {
@@ -209,6 +311,32 @@ void read_and_save(char * raw_links, FILE * ofp, struct stringArray * parsed_lin
             free(newlink);
             newlink = remove_extra(link);
             // free(link);
+
+            // printf("testing %s\n", link);
+
+
+            if((strstr(newlink,"//goo.gl") != NULL) || (strstr(newlink,"//tinyurl") != NULL) ||
+                (strstr(newlink,"//t.co") != NULL) || (strstr(newlink,"//x.co") != NULL)||
+                (strstr(newlink,"//is.gd") != NULL) || (strstr(newlink,"//bit.ly") != NULL))
+            {
+                printf("Testing for redirect: %s\n",newlink);
+
+                redirected_link = redirected(newlink);
+
+                if(redirected_link != NULL)
+                {
+                    free(newlink);
+                    newlink = remove_extra(redirected_link);
+                    free(redirected_link);
+                    printf("Changing to %s\n",newlink);
+                    // sleep();
+                }
+                else
+                {
+                    printf("Not redirected\n");
+                }
+            }
+            
 
             // printf("link from file = %s\n",newlink);
 
@@ -299,6 +427,9 @@ void read_and_save(char * raw_links, FILE * ofp, struct stringArray * parsed_lin
         free(newlink);
     // if(link)
 
+    if(elements)
+        printf("Number of links added = %d\n",elements-1);
+
     fclose(ifp);
     fclose(filtered);
 
@@ -356,42 +487,6 @@ int quick_search(struct stringArray * parsed_links, char * link)
     return 0;
 }
 
-int search_for_link(struct Linked_list * a, char * filtered_link)
-{
-    // search through the linked list for a node which contains the same filtered_hyperlink
-    // member as the test filtered_link and then return the index of this link.
-    // if the link cannot be found, return the size of the array + 1 to let the calling
-    // function know that the link did not exist in the array. this also will act 
-    // as the index of the new link.
-
-    struct node * test;
-    test = a->root;
-    // int charnum;
-
-    
-
-    if (a->size > 0)
-    {
-        // we don't need to search for the link if the list is empty
-        do  
-        {   
-            
-
-            if ( strcmp(test->filtered_hyperlink,filtered_link) == 0)
-            {
-                // printf("%s exixts already, test->data = %d\t\t**********\n", filtered_link, test->data);
-                // sleep(1);
-                return test->data;
-            }
-            to_next(&test);
-        }while(test != a->root);
-    }
-
-    // printf("%s does not exist\n", filtered_link);    
-
-    return (a->size + 1);
-}
-
 char * remove_extra(char * url)
 {
     // printf("url = %s\n", url );
@@ -443,13 +538,47 @@ void finish_up(struct stringArray * parsed, FILE * ofp, char * raw_links, char *
 {
 
     pthread_t wget_finishing;
+    int count, retries;
 
     for(;index_under_wget <= parsed->size; index_under_wget++)
     {
-        printf("\n-----------------------\n\nRound %d:\n", index_under_wget);
-        printf("looking at link %s at index %d\n",(parsed->array)[index_under_wget-1], index_under_wget);
-        pthread_create(&wget_finishing, NULL,wget_wrapper,(parsed->array)[index_under_wget-1]);
-        pthread_join(wget_finishing,NULL);
+        printf("\n-----------------------\n\nRound %d of %d:\n", index_under_wget,(int)(parsed->size));
+        printf("looking at link %s\n",(parsed->array)[index_under_wget-1]);
+
+        count = 0;
+        retries = 1;
+
+        while(retries >= 0)
+        {
+
+            count = 0;
+
+            thread_test = NOT_COMPLETED;
+            pthread_create(&wget_finishing,NULL,wget_wrapper,(parsed->array)[index_under_wget-1]);
+
+            while((thread_test == NOT_COMPLETED) && count < 200)
+            {
+                usleep(100000);
+                // printf("%d ",count );
+                count++;
+            }
+
+            // printf("\n");
+
+            if (count == 200)
+            {
+                pthread_cancel(wget_finishing);
+                printf("Retrying...\n");
+                retries--;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        // pthread_create(&wget_finishing, NULL,wget_wrapper,(parsed->array)[index_under_wget-1]);
+        // pthread_join(wget_finishing,NULL);
         // wget_wrapper((parsed->array)[index_under_wget-1], raw_links);
         // sleep(10);
         read_and_save(raw_links, ofp, parsed,filtered_links, 0);
@@ -509,6 +638,8 @@ sed -e 's/^.*\"\\([^\"]\\+\\)\".*$/\\1/g' > ";
     // sleep(1);
 
     free(final_wget);
+
+    thread_test = COMPLETED;
 
     return NULL;
 
