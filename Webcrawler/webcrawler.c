@@ -13,6 +13,7 @@
 #define BUFFLEN         2500
 #define COMPLETED       1
 #define NOT_COMPLETED   0
+#define STARTLINKS      1500
 
 struct stringArray
 {
@@ -126,6 +127,8 @@ int main()
         }
 
         // pthread_join(wget_main,NULL);
+
+        // pthread_join(wget_main,NULL);
         // wget_wrapper(link, raw_links);
 
         // printf("here in main\n");
@@ -144,7 +147,7 @@ int main()
 
         // print_linked_list(parsed_links);
 
-    }while(index_under_wget <= 400);
+    }while(index_under_wget <= STARTLINKS);
 
     // sleep(5);
 
@@ -160,6 +163,10 @@ int main()
         free(parsed_links.array[j]);
     }
     free(parsed_links.array);
+
+
+    /* we're done with libcurl, so clean it up */ 
+    curl_global_cleanup();
 
     return 0;
 
@@ -225,8 +232,6 @@ char * redirected(char * original)
         /* always cleanup */ 
         curl_easy_cleanup(curl);
 
-        /* we're done with libcurl, so clean it up */ 
-        curl_global_cleanup();
 
     }
     else
@@ -259,6 +264,7 @@ void read_and_save(char * raw_links, FILE * ofp, struct stringArray * parsed_lin
     char ch;
     int lines = 0;
     int elements = 0;
+    int added = 0;
 
     while(!feof(ifp))
     {
@@ -398,6 +404,7 @@ void read_and_save(char * raw_links, FILE * ofp, struct stringArray * parsed_lin
 
                     possible_array[elements] = to_index;
                     elements++;
+                    added++;
                 }
                 else
                 {
@@ -421,14 +428,14 @@ void read_and_save(char * raw_links, FILE * ofp, struct stringArray * parsed_lin
 
         free(possible_array);
         free(link);
+
+        if(newlink)
+            free(newlink);
     }
+    // if(link)s
 
-    if(newlink)
-        free(newlink);
-    // if(link)
-
-    if(elements)
-        printf("Number of links added = %d\n",elements-1);
+    if(added)
+        printf("Number of links added = %d\n",added);
 
     fclose(ifp);
     fclose(filtered);
@@ -568,6 +575,7 @@ void finish_up(struct stringArray * parsed, FILE * ofp, char * raw_links, char *
             if (count == 200)
             {
                 pthread_cancel(wget_finishing);
+                // pthread_join(wget)
                 printf("Retrying...\n");
                 retries--;
             }
