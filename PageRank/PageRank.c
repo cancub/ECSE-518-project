@@ -8,8 +8,8 @@
 #include "twodarrays.h"
 #include "dubvmalg.h"
 
-#define PERIODAD	10
-#define PERIODDEL	5
+#define PERIODAD	7
+#define PERIODDEL	1
 
 // struct IntArray
 // {
