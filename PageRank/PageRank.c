@@ -8,8 +8,8 @@
 #include "twodarrays.h"
 #include "dubvmalg.h"
 
-#define PERIOD		20
-#define ADAPTIVE	0
+#define PERIODAD	10
+#define PERIODDEL	5
 
 // struct IntArray
 // {
@@ -26,7 +26,9 @@ void print_order(struct DubArray * result);
 void mtranspose(struct DubArray * A, int n);
 
 
-double epsilon = 0.00000000001;
+double epsilon = 0.0001;
+
+int ADAPTIVE;
 
 int main (int argc, char *argv[]){
 	
@@ -42,14 +44,17 @@ int main (int argc, char *argv[]){
 
 	// printf("Enter graph filename: ");
 	// scanf("%s", filename);
-	if (argc == 2)
+	if (argc == 3)
 	{
 		
 		filename = argv[1];
+		ADAPTIVE = argv[2][0] - '0';
+
 	}
 	else
 	{
 		filename = "web-Google.txt";
+		ADAPTIVE = 0;
 	}
 	// printf("Type of starting x <e>ven/<o>nes: ");
 	// scanf("%s", x_type);
@@ -97,9 +102,9 @@ int main (int argc, char *argv[]){
 		return 0;
 	}
 
-	printf("Result = \n");
-	print_DubArray(&result);
-	print_order(&result);
+	// printf("Result = \n");
+	// print_DubArray(&result);
+	// print_order(&result);
 	// printf("\n");
 
 	printf("Time to converge = %5.3f s\n", (double)(msec/1000)+((double)(msec%1000))/1000 );
@@ -140,7 +145,7 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 {	
 	struct DubArray d,P,ones,x_after;
 	int v_size,i; 
-	double w, c;
+	double c;
 	double  delta = 0;
 	char * verbose;
 
@@ -192,7 +197,7 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 	{	
 
 		free(x_after.array);
-		x_after = alphaATtimesx(c,&P,x_before); 	// the result of an iteration of pure pagerank
+		x_after = alphaATtimesx(1,&P,x_before); 	// the result of an iteration of pure pagerank
 		delta = differce_vector_length(&x_after,x_before);	// final difference between the initial and final vectors of this iteration
 
 		*iter += 1;
@@ -202,7 +207,6 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 			printf("---------------------------------------------------------\n Round %d\n",i++);
 			printf("x to start round = \t");
 			print_DubArray(x_before);
-			printf("w = %6.4f\n", w );
 			printf("x to end round = \t");
 			print_DubArray(&x_after);
 			printf("delta = %9.7f\n\n",delta );
@@ -237,9 +241,9 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 
 struct DubArray get_AdaptivePageRank(struct TwoDArray * G, struct DubArray * x_before, struct DubArray * v, int * iter, double epsilon)
 {	
-	struct DubArray d,P,ones,x_after,x_converged, A;
+	struct DubArray d,A_pp,ones,x_after,x_converged,x_test, A;
 	int v_size,i; 
-	double w, c;
+	double c;
 	double  delta = 0;
 	char * verbose;
 
@@ -268,24 +272,17 @@ struct DubArray get_AdaptivePageRank(struct TwoDArray * G, struct DubArray * x_b
 	// C[i] = 1 if the element has converged
 	int * C = (int*)calloc(v_size,sizeof(int));
 
-	P = initialize_graph(G,&d);
+	A = initialize_graph(G,&d);
 
 	/* 
-	this section comes from expanding the equation P"= cP' + (1-c)E
-	expanding we get
-	P" = c(P + D) + (1-c)(ones x v^T)
-	P" = c(P +(d x v^T)) + (1-c)(ones x v^T)
-	P" = cP + c(d x v^T) + (1-c)(ones x v^T)
-	we can implement this as follows
-	P <- cP
-	P <- c(d x v^T) + P
-	P <- (1-c)(ones x v^T) + P 
+	In keeping with the labeling in the paper, A will be our original pagerank matrix (the transpose of the P'' matrix)
+	and A_pp will be A'', the matrix from which we shall periodically zero out rows
 	*/
-	scale(&P,c);
-	alphaxtimesyTplusA(c,&d,v,&P);
-	alphaxtimesyTplusA((1-c),&ones,v,&P);
-	mtranspose(&P, v_size);		// P <- P^T, 	we will periodically zero out rows of P to decrease computational time
-	A = makecopy(&P);			// A is the matrix that will remain as is for periodic testing
+	scale(&A,c);
+	alphaxtimesyTplusA(c,&d,v,&A);
+	alphaxtimesyTplusA((1-c),&ones,v,&A);
+	mtranspose(&A, v_size);			// A <- P^T, this will remain as the 
+	A_pp = makecopy(&A);			// A is the matrix that will remain as is for periodic testing
 
 
 	// printf("P matrix in use:\n");
@@ -298,21 +295,37 @@ struct DubArray get_AdaptivePageRank(struct TwoDArray * G, struct DubArray * x_b
 	{	
 
 		free(x_after.array);
-		x_after = alphaATtimesx(1,&P,x_before); 	// the result of an iteration of pagerank
-		delta = differce_vector_length(&x_after,x_before);	// final difference between the initial and final vectors of this iteration
+		x_after = alphaATtimesx(1,&A_pp,x_before);		// x_after <- A''x_before
+		alphaxplusy_y(1,&x_converged,&x_after);	// x_after <- A''x_before + x_converged
+		
+		
 
-		if((*iter) % PERIOD == 0)
+		if(((*iter) % PERIODDEL) == 0)
+		{
+			// printf("x_before\n");
+			// print_DubArray(x_before);
+			x_test = alphaATtimesx(1,&A,x_before);
+			// printf("x_test\n");
+			// print_DubArray(&x_test);
+			delta = differce_vector_length(&x_test,x_before);
+			// printf("delta = %f, epsilon = %15.14f\n",delta, epsilon);
+			// printf("\n\n");
+			free(x_test.array);
+			// sleep(1);
+		}
+
+		if(((*iter) % PERIODAD) == 0)
 		{
 			// update the bitmap for convergence to determine if any elements have converged
 			// and then update xafter with a zero in that location and the PageRank matrix
 			// with zeros in the column corresponding to those indices
-			detect_converged(x_before, &x_after, 0.01, &C, &P);
-			for(i = 0; i < v_size; i++)
-			{
-				if(C[i])
-					printf("%d ",i );
-			}
-			printf("\n");
+			detect_converged(x_before,&x_after, &x_converged, epsilon, &C, &A_pp);
+			// for(i = 0; i < v_size; i++)
+			// {
+			// 	if(C[i])
+			// 		printf("%d ",i );
+			// }
+			// printf("\n\n");
 		}
 
 		*iter += 1;
@@ -322,7 +335,6 @@ struct DubArray get_AdaptivePageRank(struct TwoDArray * G, struct DubArray * x_b
 			printf("---------------------------------------------------------\n Round %d\n",i++);
 			printf("x to start round = \t");
 			print_DubArray(x_before);
-			printf("w = %6.4f\n", w );
 			printf("x to end round = \t");
 			print_DubArray(&x_after);
 			printf("delta = %9.7f\n\n",delta );
@@ -330,10 +342,14 @@ struct DubArray get_AdaptivePageRank(struct TwoDArray * G, struct DubArray * x_b
 		}
 		// free(x_after);
 
-
 		// move the values to start the next iteration
 		free((*x_before).array);
 		*x_before = makecopy(&x_after);
+		// printf("x_after bottom\n");
+		// print_DubArray(&x_after);
+		// printf("x_before bottom\n");
+		// print_DubArray(x_before);
+		// printf("\n\n");
 
 
 		// printf("pre_delta - delta = %10.8f\n", dub_abs(pre_delta - delta));
@@ -350,7 +366,8 @@ struct DubArray get_AdaptivePageRank(struct TwoDArray * G, struct DubArray * x_b
 
 	free(ones.array);
 	free(d.array);
-	free(P.array);
+	free(A.array);
+	free(A_pp.array);
 	free(x_converged.array);
 
 	return x_after;

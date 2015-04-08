@@ -82,7 +82,7 @@ void alphaxtimesyTplusA(double alpha, struct DubArray * x, struct DubArray * y, 
 	cblas_dger(CblasRowMajor,lenx,leny,alpha,x->array,incx,y->array,incy,A->array,lda);
 }
 
-void detect_converged(struct DubArray * before, struct DubArray * after, double epsilon, int ** C, struct DubArray * A)
+void detect_converged(struct DubArray * before, struct DubArray * after, struct DubArray * converged, double epsilon, int ** C, struct DubArray * A)
 {
 	int i;
 	int n = (int)(before->size);
@@ -90,34 +90,34 @@ void detect_converged(struct DubArray * before, struct DubArray * after, double 
 	double * zeros = (double *)calloc(n,sizeof(double));
 	double difference = 0;
 
-	printf("BEFORE\t\tAFTER\n");
+	// printf("BEFORE\t\tAFTER\n");
 
-	for(i = 0; i < test_after.size; i++)
-	{
-		printf("%10.8f\t%10.8f\n",before->array[i],test_after.array[i] );
-	}
+	// for(i = 0; i < test_after.size; i++)
+	// {
+	// 	printf("%10.8f\t%10.8f\n",before->array[i],test_after.array[i] );
+	// }
 
-	printf("\n");
+	// printf("\n");
 
 	alphaxplusy_y(-1,before,&test_after);
-	printf("DIFFERENCE\n");
-	for(i = 0; i < test_after.size; i++)
-	{
-		printf("%f\n",test_after.array[i] );
-	}
+	// printf("DIFFERENCE\n");
+	// for(i = 0; i < test_after.size; i++)
+	// {
+	// 	printf("%f\n",test_after.array[i] );
+	// }
 
-	printf("\n");
-	printf("TEST VALUES (<0.01?)\n");
 	for(i = 0; i < test_after.size;i++)
 	{
-		difference = fabs((test_after.array[i]) / (before->array[i]));
-		printf("%f\t test < epsilon = %d, N[%d] = %d\n", difference, difference < epsilon,i,(*C)[i]);
-		if ((difference < epsilon) && ((*C)[i] != 1))
+		if((*C)[i] != 1)
 		{
-			printf("here %d\n", i);
-			after->array[i] = 0;	// this element has converged
-			(*C)[i] = 1;
-			cblas_dcopy(n,zeros,1,&(A->array[i*n]),1);
+			
+			difference = fabs((test_after.array[i]) / (before->array[i]));
+			if (difference < epsilon)
+			{
+				converged->array[i] = after->array[i];	// this element has converged
+				(*C)[i] = 1;
+				cblas_dcopy(n,zeros,1,&(A->array[i*n]),1);
+			}
 		}
 	}
 
