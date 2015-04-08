@@ -75,20 +75,36 @@ struct DubArray initialize_vector(int length, double value)
 	// printf("here1\n");
 	struct DubArray temp;
 	int i;
-	if (length > 0)
+	if(value==0)
 	{
-		temp.size = length;
-		temp.array = (double *)malloc(temp.size * sizeof(double));
+		if(length > 0)
+		{
+			temp.size = length;
+			temp.array = (double*)calloc(length,sizeof(double));
+		}
+		else
+		{
+			temp.size = 0;
+			temp.array = (double*)calloc(1,sizeof(double));
+		}
 	}
 	else
 	{
-		temp.size = 0;
-		temp.array = (double *)malloc(sizeof(double));
-	}
+		if (length > 0)
+		{
+			temp.size = length;
+			temp.array = (double *)malloc(temp.size * sizeof(double));
+		}
+		else
+		{
+			temp.size = 0;
+			temp.array = (double *)malloc(sizeof(double));
+		}
 
-	for(i = 0; i < length; i++)
-	{
-		temp.array[i] = value;
+		for(i = 0; i < length; i++)
+		{
+			temp.array[i] = value;
+		}
 	}
 
 	return temp;

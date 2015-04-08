@@ -47,7 +47,7 @@ struct DubArray alphaATtimesx(double ALPHA, struct DubArray * A,struct DubArray 
 	INCX = INCY = 1;
 
 
-	cblas_dgemv(CblasRowMajor,CblasTrans,M,N,ALPHA,A->array,LDA,x->array,INCX,BETA,y.array,INCY);
+	cblas_dgemv(CblasRowMajor,CblasNoTrans,M,N,ALPHA,A->array,LDA,x->array,INCX,BETA,y.array,INCY);
 
 	return y;
 }
@@ -81,22 +81,45 @@ void alphaxtimesyTplusA(double alpha, struct DubArray * x, struct DubArray * y, 
 	cblas_dger(CblasRowMajor,lenx,leny,alpha,x->array,incx,y->array,incy,A->array,lda);
 }
 
-void detect_converged(struct DubArray * before, struct DubArray * after, double espilon, int ** N, struct DubArray * A)
+void detect_converged(struct DubArray * before, struct DubArray * after, double epsilon, int ** C, struct DubArray * A)
 {
 	int i;
 	int n = (int)(before->size);
-	alphaxplusy_y(-1,before,after);
+	struct DubArray test_after = makecopy(after);
 	double * zeros = (double *)calloc(n,sizeof(double));
-	for(i = 0; i < after->size;i++)
-	{
+	double difference = 0;
 
-		if (fabs(after->array[i]/before->array[i]) < espilon)
+	printf("BEFORE\t\tAFTER\n");
+
+	for(i = 0; i < test_after.size; i++)
+	{
+		printf("%10.8f\t%10.8f\n",before->array[i],test_after.array[i] );
+	}
+
+	printf("\n");
+
+	alphaxplusy_y(-1,before,&test_after);
+	printf("DIFFERENCE\n");
+	for(i = 0; i < test_after.size; i++)
+	{
+		printf("%f\n",test_after.array[i] );
+	}
+
+	printf("\n");
+	printf("TEST VALUES (<0.01?)\n");
+	for(i = 0; i < test_after.size;i++)
+	{
+		difference = fabs((test_after.array[i]) / (before->array[i]));
+		printf("%f\t test < epsilon = %d, N[%d] = %d\n", difference, difference < epsilon,i,(*C)[i]);
+		if ((difference < epsilon) && ((*C)[i] != 1))
 		{
+			printf("here %d\n", i);
 			after->array[i] = 0;	// this element has converged
-			(*N)[i] = 0;
+			(*C)[i] = 1;
 			cblas_dcopy(n,zeros,1,&(A->array[i*n]),1);
 		}
 	}
 
 	free(zeros);
+	free(test_after.array);
 }

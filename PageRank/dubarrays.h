@@ -9,6 +9,12 @@ struct DubArray
 	size_t size;
 };
 
+struct IntArray
+{
+	int * array;
+	size_t size;
+};
+
 // struct DubArray initialize_graph(struct TwoDArray * a, struct DubArray * no_out);
 // double dotproduct(struct DubArray * x, struct DubArray * y);
 struct DubArray initialize_vector(int length, double value);

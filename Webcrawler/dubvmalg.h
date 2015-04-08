@@ -3,11 +3,7 @@
 
 #include "dubarrays.h"
 
-struct IntArray
-{
-	int * array;
-	size_t size;
-};
+
 
 void alphaxtimesyTplusA(double alpha, struct DubArray * x, struct DubArray * y, struct DubArray * A);
 double dotproduct(struct DubArray * x, struct DubArray * y);
@@ -17,7 +13,7 @@ struct DubArray alphaATtimesx(double ALPHA, struct DubArray * A,struct DubArray 
 double differce_vector_length(struct DubArray * x1,struct DubArray * x0);
 struct DubArray makecopy(struct DubArray * a);
 double L1_difference(struct DubArray * x1, struct DubArray * x0);
-void detect_converged(struct DubArray * before, struct DubArray * after, double espilon, int ** N, struct DubArray * A);
+void detect_converged(struct DubArray * before, struct DubArray * after, double epsilon, int ** C, struct DubArray * A);
 // void mtranspose(struct DubArray * a);
 
 #endif
