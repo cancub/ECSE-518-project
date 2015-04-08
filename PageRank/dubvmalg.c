@@ -82,7 +82,7 @@ void alphaxtimesyTplusA(double alpha, struct DubArray * x, struct DubArray * y, 
 	cblas_dger(CblasRowMajor,lenx,leny,alpha,x->array,incx,y->array,incy,A->array,lda);
 }
 
-void detect_converged(struct DubArray * before, struct DubArray * after, struct DubArray * converged, double epsilon, int ** C, struct DubArray * A)
+void detect_converged(struct DubArray * before, struct DubArray * after, struct DubArray * converged, double epsilon, int ** C, struct DubArray * A, int * count)
 {
 	int i;
 	int n = (int)(before->size);
@@ -110,12 +110,13 @@ void detect_converged(struct DubArray * before, struct DubArray * after, struct 
 	{
 		if((*C)[i] != 1)
 		{
-			
+
 			difference = fabs((test_after.array[i]) / (before->array[i]));
 			if (difference < epsilon)
 			{
 				converged->array[i] = after->array[i];	// this element has converged
 				(*C)[i] = 1;
+				*count += 1;
 				cblas_dcopy(n,zeros,1,&(A->array[i*n]),1);
 			}
 		}

@@ -9,7 +9,7 @@
 #include "dubvmalg.h"
 
 #define PERIODAD	7
-#define PERIODDEL	1
+#define PERIODDEL	100
 
 // struct IntArray
 // {
@@ -26,9 +26,9 @@ void print_order(struct DubArray * result);
 void mtranspose(struct DubArray * A, int n);
 
 
-double epsilon = 0.0001;
+double epsilon = 0.001;
 
-int ADAPTIVE;
+int adaptive = 0;
 
 int main (int argc, char *argv[]){
 	
@@ -48,13 +48,16 @@ int main (int argc, char *argv[]){
 	{
 		
 		filename = argv[1];
-		ADAPTIVE = argv[2][0] - '0';
+		adaptive = argv[2][0] - '0';
 
+	}
+	else if (argc == 2)
+	{
+		filename = argv[1];
 	}
 	else
 	{
 		filename = "web-Google.txt";
-		ADAPTIVE = 0;
 	}
 	// printf("Type of starting x <e>ven/<o>nes: ");
 	// scanf("%s", x_type);
@@ -82,7 +85,7 @@ int main (int argc, char *argv[]){
 	x_0 = initialize_vector((int)(temp_array.size), x_vals);
 
 	clock_t start = clock(), diff;
-	if(ADAPTIVE)
+	if(adaptive)
 	{
 		result = get_AdaptivePageRank(&temp_array, &x_0, &start_v, &itercount, epsilon);
 	}
@@ -102,8 +105,8 @@ int main (int argc, char *argv[]){
 		return 0;
 	}
 
-	// printf("Result = \n");
-	// print_DubArray(&result);
+	printf("Result = \n");
+	print_DubArray(&result);
 	// print_order(&result);
 	// printf("\n");
 
@@ -242,7 +245,7 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 struct DubArray get_AdaptivePageRank(struct TwoDArray * G, struct DubArray * x_before, struct DubArray * v, int * iter, double epsilon)
 {	
 	struct DubArray d,A_pp,ones,x_after,x_converged,x_test, A;
-	int v_size,i; 
+	int v_size,i, converged_count = 0; 
 	double c;
 	double  delta = 0;
 	char * verbose;
@@ -317,9 +320,16 @@ struct DubArray get_AdaptivePageRank(struct TwoDArray * G, struct DubArray * x_b
 		if(((*iter) % PERIODAD) == 0)
 		{
 			// update the bitmap for convergence to determine if any elements have converged
-			// and then update xafter with a zero in that location and the PageRank matrix
+			// and then update x_converged with a zero in that location and the PageRank matrix
 			// with zeros in the column corresponding to those indices
-			detect_converged(x_before,&x_after, &x_converged, epsilon, &C, &A_pp);
+			detect_converged(x_before,&x_after, &x_converged, epsilon, &C, &A_pp, &converged_count);
+
+			if (converged_count == v_size)
+			{
+				printf("here\n");
+				// print_DubArray(&x_after);
+				break;
+			}
 			// for(i = 0; i < v_size; i++)
 			// {
 			// 	if(C[i])
@@ -359,7 +369,7 @@ struct DubArray get_AdaptivePageRank(struct TwoDArray * G, struct DubArray * x_b
 
 	// printf("here\n");
 
-	if (delta > epsilon)
+	if ((delta > epsilon) && (converged_count != v_size))
 	{
 		x_after.array = NULL;
 	}

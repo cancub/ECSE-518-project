@@ -13,8 +13,8 @@
 #define BUFFLEN         2500
 #define COMPLETED       1
 #define NOT_COMPLETED   0
-#define STARTLINKS      1500
-#define WAITTIME        400
+#define STARTLINKS      4000
+#define WAITTIME        2000
 
 struct stringArray
 {
@@ -104,7 +104,7 @@ int main()
             thread_test = NOT_COMPLETED;
             pthread_create(&wget_main,NULL,wget_wrapper,link);
 
-            while((thread_test == NOT_COMPLETED) && count < WAITTIME)
+            while((thread_test == NOT_COMPLETED) && (count < WAITTIME))
             {
                 usleep(100000);
                 // printf("%d ",count );
