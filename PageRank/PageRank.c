@@ -176,25 +176,9 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 	P <- c(d x v^T) + P
 	P <- (1-c)(ones x v^T) + P 
 	*/
-	// printf("P matrix in use:\n");
-	// print_DubMatrix(&P, v_size);
-	// printf("\n");
-
 	scale(&P,c);
-	// printf("P matrix in use:\n");
-	// print_DubMatrix(&P, v_size);
-	// printf("\n");
-
 	alphaxtimesyTplusA(c,&d,v,&P);
-	// printf("P matrix in use:\n");
-	// print_DubMatrix(&P, v_size);
-	// printf("\n");
-
 	alphaxtimesyTplusA((1-c),&ones,v,&P);
-	// printf("P matrix in use:\n");
-	// print_DubMatrix(&P, v_size);
-	// printf("\n");
-
 	mtranspose(&P, v_size);		// P <- P^T
 
 
@@ -208,12 +192,7 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 	{	
 
 		free(x_after.array);
-		x_after = alphaATtimesx(1,&P,x_before); 	// the result of an iteration of pagerank
-
-		// print_DubArray(&x_after);
-		// sleep(1);
-		w = L1_difference(x_before,&x_after);		// the L1 difference between the ranks before and after this iteration	
-		alphaxplusy_y(w,v,&x_after);				// random surfer
+		x_after = alphaATtimesx(c,&P,x_before); 	// the result of an iteration of pure pagerank
 		delta = differce_vector_length(&x_after,x_before);	// final difference between the initial and final vectors of this iteration
 
 		*iter += 1;
@@ -319,9 +298,7 @@ struct DubArray get_AdaptivePageRank(struct TwoDArray * G, struct DubArray * x_b
 	{	
 
 		free(x_after.array);
-		x_after = alphaATtimesx(1,&P,x_before); 	// the result of an iteration of pagerank	
-		// w = L1_difference(x_before,&x_after);		// the L1 difference between the ranks before and after this iteration	
-		// alphaxplusy_y(w,v,&x_after);				// random surfer
+		x_after = alphaATtimesx(1,&P,x_before); 	// the result of an iteration of pagerank
 		delta = differce_vector_length(&x_after,x_before);	// final difference between the initial and final vectors of this iteration
 
 		if((*iter) % PERIOD == 0)

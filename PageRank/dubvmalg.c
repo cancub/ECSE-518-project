@@ -46,6 +46,7 @@ struct DubArray alphaATtimesx(double ALPHA, struct DubArray * A,struct DubArray 
 	M = N = LDA = v_size;
 	INCX = INCY = 1;
 
+	// printf("found apasdasd\n");
 
 	cblas_dgemv(CblasRowMajor,CblasNoTrans,M,N,ALPHA,A->array,LDA,x->array,INCX,BETA,y.array,INCY);
 

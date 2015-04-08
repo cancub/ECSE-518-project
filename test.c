@@ -5,35 +5,31 @@
 #include <time.h>
 #include <cblas.h>
 
-// struct DubArray
-// {
-//     double * array;
-//     size_t size;
-// };
+struct DubArray
+{
+    double * array;
+    size_t size;
+};
 
-// struct DubArray initialize_vector(int length, double value)
-// {
-//     // printf("here1\n");
-//     struct DubArray temp;
-//     int i;
-//     if (length > 0)
-//     {
-//         temp.size = length;
-//         temp.array = (double *)malloc(temp.size * sizeof(double));
-//     }
-//     else
-//     {
-//         temp.size = 0;
-//         temp.array = (double *)malloc(sizeof(double));
-//     }
+void mtranspose(double ** A, int n)
+{
+    // A is the n by n matrix we will transpose
 
-//     for(i = 0; i < length; i++)
-//     {
-//         temp.array[i] = value;
-//     }
+    double temp;    // hold the intermediate value as we switch the values in the elements
 
-//     return temp;
-// }
+    int i,j;
+
+    for(i = 0; i < n-1; i++)
+    {
+        for(j = i+1; j < n; j++)
+        {
+            temp = (*A)[i*n+j];
+            (*A)[i*n+j] = (*A)[j*n+i];
+            (*A)[j*n+i] = temp;
+        }
+    }
+
+}
 
 int main()
 {
@@ -45,7 +41,7 @@ int main()
     int i, r = 0;
     srand(time(NULL));
 
-    for(i = 0; i < 4; i++)
+    for(i = 0; i < rand()%row_size; i++)
     {
         
         do
@@ -60,35 +56,41 @@ int main()
         // printf("zeroing %dth row\n",r );
     }
 
-    for (;i < matrix_elements; i++)
+    for (i = 0;i < matrix_elements; i++)
     {
         a[i] = i;
-        // printf("%5.0f ",a[i]);
-        // if(i%row_size == row_size-1)
-        // {
-        //     printf("\n");
-        // }
+        printf("%4.0f ",a[i]);
+        if(i%row_size == row_size-1)
+        {
+            printf("\n");
+        }
     }
-    // printf("\n\n");
+    printf("\n\n");
 
     int j;
 
     double * to_zero;
-
-    printf("here\n");
     for(i = 0; i < row_size; i++)
     {
         if (bitmap[i])
         {
             cblas_dcopy(row_size,zeros,1,&(a[i*row_size]),1);
-            // printf("here with i = %d\n",i );
-            // for(j = i*row_size; j < (i+1)*row_size; j++)
-            // {
-            //     a[j] = 0;
-            // }
         }
     }
-    printf("finished\n");
+
+    for(i = 0; i < matrix_elements; i++)
+    {
+        printf("%4.0f ",a[i]);
+        if(i%row_size == row_size-1)
+        {
+            printf("\n");
+        }
+    }
+
+    printf("\n\n");
+
+    printf("starting transpose\n");
+    mtranspose(&a,row_size);
 
     for(i = 0; i < matrix_elements; i++)
     {
