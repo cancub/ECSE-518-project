@@ -54,12 +54,13 @@ char raw_links[] = "raw_links.txt";
 
 int thread_test;
 
-int main()
+int main(int argc, char *argv[])
 {
     char * link; 
     struct stringArray parsed_links;
     pthread_t wget_main;
     int count, retries;
+    char * starter;
     // struct node * temp;
     FILE * ofp = fopen("output.txt","w");
 
@@ -71,7 +72,14 @@ int main()
         return(-1);
     }
 
-    char * starter = "http://www.mcgill.ca/crawlers";    // the starting node
+    if(argc == 2)
+    {
+        starter = argv[1];
+    }
+    else
+    {
+        starter = "http://www.google.com";    // the starting node
+    }
 
     FILE * clean = fopen(filtered,"w");
     fprintf(clean, "%s\n",starter );
