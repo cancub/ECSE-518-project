@@ -49,6 +49,8 @@ int quick_search(struct stringArray * parsed_links, char * link);
 char * remove_slash(char ** link);
 void print_links(struct stringArray * list);
 char * redirected(char * original);
+char * switch_order(char * url);
+
 
 int index_under_wget = 1;
 char raw_links[] = "raw_links.txt";
@@ -57,11 +59,10 @@ int thread_test;
 
 int main(int argc, char *argv[])
 {
-    char * link; 
+    char * link, *starter, *newurl; 
     struct stringArray parsed_links;
     pthread_t wget_main;
     int count, retry;
-    char * starter;
     // struct node * temp;
     FILE * ofp = fopen("output.txt","w");
 
@@ -102,6 +103,9 @@ int main(int argc, char *argv[])
     {        
         printf("\n-----------------------\n\nRound %d of %d:\n", index_under_wget,(int)(parsed_links.size));
         printf("looking at link %s\n",link);
+        newurl = switch_order(link);
+        printf("reversal of this link is %s\n",newurl);
+        free(newurl);
 
         retry = 0;
 
@@ -133,6 +137,7 @@ int main(int argc, char *argv[])
             }
             else
             {
+                pthread_join(wget_main,NULL);
                 break;
             }
         }
@@ -142,6 +147,8 @@ int main(int argc, char *argv[])
             FILE * to_clear = fopen(raw_links,"w");
             fclose(to_clear);
         }
+
+
 
         // pthread_join(wget_main,NULL);
 
@@ -246,15 +253,16 @@ char * redirected(char * original)
             }
         }
 
-        /* always cleanup */ 
-        curl_easy_cleanup(curl);
-
-
     }
     else
     {
         printf("cURL error.\n");
     }
+    
+
+    /* always cleanup */ 
+    curl_easy_cleanup(curl);
+    curl_global_cleanup();
 
     return result;
 
@@ -264,19 +272,26 @@ char * redirected(char * original)
 void read_and_save(char * raw_links, FILE * ofp, struct stringArray * parsed_links, char * filtered_links, int add_links)
 {
     // open the raw links file from wget
-    FILE * ifp = fopen(raw_links,"r");
-    FILE * filtered = fopen(filtered_links,"a");
+    
     char * link = NULL;
     char * newlink = NULL;
     int to_index, from_index = index_under_wget;
     size_t nbytes;
     int i;
 
+    FILE * ifp = fopen(raw_links,"r");
     if(ifp == NULL)
     {
-        printf("Could not open %s for writing\n", raw_links);
-        exit(0);
+        printf("Could not open %s for reading\n", raw_links);
+        return;
     }
+    FILE * filtered = fopen(filtered_links,"a");
+    if(ofp == NULL)
+    {
+        printf("Could not open %s for writing\n", filtered_links);
+        return;
+    }
+    
 
     char ch;
     int lines = 0;
@@ -344,8 +359,10 @@ void read_and_save(char * raw_links, FILE * ofp, struct stringArray * parsed_lin
 
 
             if((strstr(test_link,"//goo.gl") != NULL) || (strstr(test_link,"//tinyurl") != NULL) ||
-                (strstr(test_link,"//t.co") != NULL) || (strstr(test_link,"//x.co") != NULL)||
-                (strstr(test_link,"//is.gd") != NULL) || (strstr(test_link,"//bit.ly") != NULL))
+                (strstr(test_link,"//t.co") != NULL) || (strstr(test_link,"//x.co") != NULL) ||
+                (strstr(test_link,"//is.gd") != NULL) || (strstr(test_link,"//bit.ly") != NULL) ||
+                (strstr(test_link,"//owl.ly") != NULL) || (strstr(test_link,"//deck.ly") != NULL) ||
+                (strstr(test_link,"//su.pr") != NULL) || (strstr(test_link,"//ink.co") != NULL))
             {
                 printf("Testing for redirect: %s\n",test_link);
 
@@ -455,6 +472,7 @@ void read_and_save(char * raw_links, FILE * ofp, struct stringArray * parsed_lin
 
 
         free(possible_array);
+        free(test_link);
         free(link);
 
         if(newlink)
@@ -574,11 +592,17 @@ void finish_up(struct stringArray * parsed, FILE * ofp, char * raw_links, char *
 
     pthread_t wget_finishing;
     int count, retry;
+    char * link, *newurl;
 
     for(;index_under_wget <= parsed->size; index_under_wget++)
     {
+        link = (parsed->array)[index_under_wget-1];
+
         printf("\n-----------------------\n\nRound %d of %d:\n", index_under_wget,(int)(parsed->size));
-        printf("looking at link %s\n",(parsed->array)[index_under_wget-1]);
+        printf("looking at link %s\n",link);
+        newurl = switch_order(link);
+        printf("reversal of this link is %s\n",newurl);
+        free(newurl);
 
         count = 0;
         retry = 0;
@@ -589,7 +613,7 @@ void finish_up(struct stringArray * parsed, FILE * ofp, char * raw_links, char *
             count = 0;
 
             thread_test = NOT_COMPLETED;
-            pthread_create(&wget_finishing,NULL,wget_wrapper,(parsed->array)[index_under_wget-1]);
+            pthread_create(&wget_finishing,NULL,wget_wrapper,link);
 
             while( (thread_test == NOT_COMPLETED) && (count < (WAITTIME*(retry+1))) )
             {
@@ -611,6 +635,7 @@ void finish_up(struct stringArray * parsed, FILE * ofp, char * raw_links, char *
             }
             else
             {
+                pthread_join(wget_finishing, NULL);
                 break;
             }
         }
@@ -727,8 +752,8 @@ char * switch_order(char * url)
         testurl = (char *)malloc(strlen("www.") + strlen(beginning) + 1);     
         testurl[4 + strlen(beginning)] = '\0';
 
-        strcat(testurl,"www.");
-        strcat(&(testurl[4]),beginning);
+        strcpy(testurl,"www.");
+        strcpy(&(testurl[4]),beginning);
         testurl[4 /* "www." */ + strlen(beginning)] = '\0';
         beginning = testurl;
     }
