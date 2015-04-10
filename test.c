@@ -8,61 +8,141 @@
 
 //----------------------------------setting indices based on pointers-----------------------------------
 
+struct node
+{
+	int index;
+	struct node * prev;
+	struct node * next;
+	char * link;
+	int ** edges_to;
+};
+
+struct nodeArray
+{
+	struct node * root;
+	size_t size;
+};
 
 
 int main()
 {
-    int i,j, size = 5;
-    char ** string_array = (char **)malloc(sizeof(char *) * size);
-    char intchar;
-    int * indices = (int*)malloc(sizeof(int) * size);
-    int *** edges = (int***)malloc(sizeof(int**)*size);
+    int i,j, size = 5;	// number of links
+    FILE * ifp = fopen("filtered_links.txt","r");		// file from which we obtain the links
+    struct node * firstnode = (struct node*)malloc(sizeof(struct node));    
+    firstnode->next = NULL;
+    firstnode->prev = NULL;
+    char what[] = "test";
+    // fgets(firstnode->link,2000,ifp);
+    // printf("here\n");
+    firstnode->index = 1;
+    firstnode->edges_to = (int **)malloc(sizeof(int*));
+    firstnode->edges_to[0] = &(firstnode->index);
 
-    for(i = 0; i < size; i++)
-    {
-        indices[i] = i+1;
-    }
+    struct node * secondnode = (struct node*)malloc(sizeof(struct node));
+    secondnode->prev = firstnode;
 
-    srand(time(NULL));
+    secondnode->next = NULL;
+    secondnode->index = 2;
+    secondnode->edges_to = (int **)malloc(sizeof(int*) *2);
+    secondnode->edges_to[0] = &(firstnode->index);
+    secondnode->edges_to[1] = &(secondnode->index);
+    
 
-    for (i = 0; i< size; i++)
-    {
-        string_array[i] = (char*)malloc(6);
-        strcpy(string_array[i],"testx");
-        intchar = '0' + i;
-        string_array[i][4] = intchar;
-        indices[i] = i;
+	printf("Link %d points to links: ", firstnode->index);
+	for(j = 0; j < firstnode->index; j++)
+	{
+		printf("%d ", *(firstnode->edges_to[j]));
+	}
+	printf("\n");
+	printf("Link %d points to links: ", secondnode->index);
+	for(j = 0; j < secondnode->index; j++)
+	{
+		printf("%d ", *(secondnode->edges_to[j]));
+	}
 
-        edges[i] = (int **)malloc(sizeof(int*) *(i+1));
-        for(j = 0; j<(i+1);j++ )
-        {
-            edges[i][j] = &(indices[i]);
-        }
-        // usleep(100000);
-        // srand(time(NULL));
-    }
+    firstnode->index = 25;
+    secondnode->index = 10;
+    printf("\n");
+
+    printf("Link %d points to links: ", firstnode->index);
+	for(j = 0; j < 1; j++)
+	{
+		printf("%d ", *(firstnode->edges_to[j]));
+	}
+	// printf("%d ", *(firstnode->edges_to[0]));
+	printf("\n");
+
+	printf("Link %d points to links: ", secondnode->index);
+	for(j = 0; j < 2; j++)
+	{
+		printf("%d ", *(secondnode->edges_to[j]));
+	}
+	printf("\n");
+
+    printf("here\n");
+    free(secondnode->edges_to);
+    free(secondnode);
+
+
+    // i = 1;
+    // do
+    // {
+
+    // 	firstnode->next = (struct node*)malloc(sizeof(struct node*));
+    // 	firstnode->next->next = NULL;
+    // 	firstnode->next->prev = firstnode->next;
+    //     indices[i] = i+1;
+    //     i++;
+    // }while(i < size);
+
+    
+
+    // for (i = 0; i< size; i++)
+    // {
+    //     strcpy(string_array[i],"testx");
+    //     string_array[i][4] = '0' + i;
+    //     indices[i] = i;
+
+    //     edges[i] = (int **)malloc(sizeof(int*) *(i+1));
+    //     for(j = 0; j<(i+1);j++ )
+    //     {
+    //         edges[i][j] = &(indices[i]);
+    //     }
+    //     // usleep(100000);
+    //     // srand(time(NULL));
+    // }
+
+    // // for(i = 0; i < size; i++)
+    // // {
+    // //     // string_array[i] = test;
+    // //     (string_array[i])[4] = '1';
+    // //     // printf("%s\n\n",string_array[i] );
+    // // }
 
     // for(i = 0; i < size; i++)
     // {
-    //     // string_array[i] = test;
-    //     (string_array[i])[4] = '1';
-    //     // printf("%s\n\n",string_array[i] );
+
+    //     printf("%s\n",string_array[i] );
     // }
 
-    for(i = 0; i < size; i++)
-    {
+    free(firstnode->edges_to);
+    free(firstnode);
+    // struct node * temp1 = link_list->root->next;
+    // struct node * temp2;
+    // do
+    // {   
 
-        printf("%s\n",string_array[i] );
-    }
+    //     temp1 = temp1->next;
+    //     free(temp1->previous.edges_to)
+    //     free(firstnode->previous1);
+        // printf("here\n");
+    //     temp1 = temp2;
+    // }while(temp1->next != NULL);
 
-    for(i = 0; i < size; i++)
-    {
-        free(string_array[i]);
-        free(edges[i]);
-    }
-    free(string_array);
-    free(indices);
-    free(edges);
+    // free(a->root);
+
+    
+    fclose(ifp);
 }
 
 
