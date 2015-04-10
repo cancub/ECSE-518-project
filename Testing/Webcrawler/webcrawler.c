@@ -17,12 +17,6 @@
 #define WAITTIME        1000
 #define RETRIES         3
 
-struct stringArray
-{
-    char ** array;
-    size_t size;
-};
-
 // NOTE THAT THE FORMAT FOR FILTERED LINKS IS 
 // (completely filtered, extra removed, index of page that pointed to this one)
 
@@ -31,23 +25,16 @@ struct stringArray
 
 //http://stackoverflow.com/questions/298510/how-to-get-the-current-directory-in-a-c-program
 
-char * flip_url(char * url);
-char * add_slash(char * url);
 void * wget_wrapper(void * arg);
 void crawl_page(char * inputfile, char * newinputfile, char * parsed_links, char * raw_links);
 char * remove_extra(char * url);
-void filter_and_store(char * raw, struct Linked_list * a);
 void add_edge(struct Linked_list * a, int from_index, int to_index);
 void add_link(struct Linked_list * a, char * link, int index);
-char * clean_link(char * url);
-int search_for_link(struct Linked_list * a, char * filtered_link);
-void print_string(char * string_thing);
-char * rm_invalid(char * url);
-void finish_up(struct stringArray * parsed, FILE * ofp, char * raw_links, char * filtered_links);
-void read_and_save(char * raw_links, FILE * ofp, struct stringArray * parsed_links, char * filtered_links, int add_links);
-int quick_search(struct stringArray * parsed_links, char * link);
+void finish_up(struct Linked_list* parsed, char * raw_links, char * filtered_links);
+void read_and_save(char * raw_links, struct Linked_list * parsed_links, char * filtered_links, int add_links);
+int quick_search(struct Linked_list * parsed_links, char * link);
 char * remove_slash(char ** link);
-void print_links(struct stringArray * list);
+void print_links(struct Linked_list * list);
 char * redirected(char * original);
 char * switch_order(char * url);
 
@@ -59,21 +46,22 @@ int thread_test;
 
 int main(int argc, char *argv[])
 {
-    char * link, *starter, *newurl; 
-    struct stringArray parsed_links;
-    pthread_t wget_main;
-    int count, retry;
-    // struct node * temp;
-    FILE * ofp = fopen("output.txt","w");
+    char * link, *starter, *newurl; // the various urls that will be used throughout the main code 
+    struct Linked_list parsed_links;    // the dl_list structure that will contain the vertices, their hyperlinks and their edges to other vertices
+    pthread_t wget_main;    // our main wget thread that we can kill if it hangs
+    int count, retry;       // the tests to see if we should kill the current wget or just skip it
+    FILE * ofp = fopen("output.txt","w");   // the file containing all the directed graph edges
+    char * filtered = "filtered_links.txt"; // the filename for the file which will contain all the links we have found.
+                                            // when finished, this will show the links in their proper order
 
-    char * filtered = "filtered_links.txt";
-
+    // check that the file was opened properly
     if(ofp == NULL)
     {
         printf("Could not open output.txt for writing\n");
         return(-1);
     }
 
+    // allow for user input
     if(argc == 2)
     {
         starter = argv[1];
@@ -83,15 +71,13 @@ int main(int argc, char *argv[])
         starter = "http://www.google.com";    // the starting node
     }
 
+    // since we will be appending links to the filtered link file, make sure it doesn't contain links from a previous session
     FILE * clean = fopen(filtered,"w");
     fprintf(clean, "%s\n",starter );
     fclose(clean);
 
-    //initialize linked lists
-    // parsed_links = initialize_linked_list(1);
-    parsed_links.size = 1;
-    parsed_links.array = (char **)malloc(sizeof(char *) * 1000);
-    parsed_links.array[0] = remove_extra(starter);
+    //initialize linked lists    
+    parsed_links = initialize_linked_list(1);
 
     // free(starter);
 
@@ -148,52 +134,19 @@ int main(int argc, char *argv[])
             fclose(to_clear);
         }
 
-
-
-        // pthread_join(wget_main,NULL);
-
-        // pthread_join(wget_main,NULL);
-        // wget_wrapper(link, raw_links);
-
-        // printf("here in main\n");
-
-        read_and_save(raw_links,ofp, &parsed_links,filtered, 1);
-
-        // printf("ici\n");
-
-        // filter_and_store(raw_links, parsed_links);
+        read_and_save(raw_links, &parsed_links,filtered, 1);
 
         index_under_wget++;
 
         link = parsed_links.array[index_under_wget-1];
 
-        // link = (get_node_at_index(parsed_links,index_under_wget-1))->hyperlink;
-
-        // print_linked_list(parsed_links);
-
     }while(index_under_wget <= STARTLINKS);
 
-    // sleep(5);
-
-    finish_up(&parsed_links, ofp, raw_links, filtered);
+    finish_up(&parsed_links, raw_links, filtered);
 
     fclose(ofp);
 
-    int j = 0;
-
-    // printf("here\n");
-    for (;j < parsed_links.size; j++)
-    {
-        free(parsed_links.array[j]);
-    }
-    free(parsed_links.array);
-
-
-    /* we're done with libcurl, so clean it up */ 
-    curl_global_cleanup();
-
     return 0;
-
 }
 
 
@@ -234,22 +187,20 @@ char * redirected(char * original)
 
         if(CURLE_OK == curl_res) 
         {
+
             char *url;
             curl_res = curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &url);
 
             if((CURLE_OK == curl_res) && url)
             {
-                // curl_res = curl_easy_getinfo(curl,CURLINFO_RESPONSE_CODE,code);
+                // we only bother to allocate space to return a link if it
+                // is indeed redirected
                 if(strcmp(url,original) != 0)
                 {
                     result = (char *)malloc(strlen(url) + 1);
 
                     strcpy(result,url);
                 }
-                // else
-                // {   
-                //     // printf("No redirect, using ...%s...\n",newlink);
-                // }
             }
         }
 
@@ -258,7 +209,7 @@ char * redirected(char * original)
     {
         printf("cURL error.\n");
     }
-    
+
 
     /* always cleanup */ 
     curl_easy_cleanup(curl);
@@ -269,7 +220,7 @@ char * redirected(char * original)
 }
 
 
-void read_and_save(char * raw_links, FILE * ofp, struct stringArray * parsed_links, char * filtered_links, int add_links)
+void read_and_save(char * raw_links, struct Linked_list * parsed_links, char * filtered_links, int add_links)
 {
     // open the raw links file from wget
     
@@ -494,7 +445,7 @@ void read_and_save(char * raw_links, FILE * ofp, struct stringArray * parsed_lin
     // sleep(3);
 }
 
-void print_links(struct stringArray * list)
+void print_links(struct Linked_list * list)
 {
     int i;
 
@@ -504,7 +455,7 @@ void print_links(struct stringArray * list)
     }
 }
 
-int quick_search(struct stringArray * parsed_links, char * link)
+int quick_search(struct Linked_list * parsed_links, char * link)
 {
     int i,j;
     int length = strlen(link);
@@ -587,7 +538,7 @@ char * remove_extra(char * url)
 
 }
 
-void finish_up(struct stringArray * parsed, FILE * ofp, char * raw_links, char * filtered_links)
+void finish_up(struct Linked_list * parsed, char * raw_links, char * filtered_links)
 {
 
     pthread_t wget_finishing;

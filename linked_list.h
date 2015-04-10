@@ -7,7 +7,7 @@
 struct node
 {
 	// for our purposes in webcrawler, we will use data for the index of the link
-    int data;
+    int index;
     struct node *next;
     struct node *previous;
     char * hyperlink;
@@ -45,5 +45,7 @@ void copy_and_append(struct Linked_list * from, struct Linked_list * to);
 void to_next(struct node ** n);
 void to_prev(struct node ** n);
 void concatenate_lists(struct Linked_list * a, struct Linked_list * b);
+void insert_node_before(struct node * existing, struct node * new_node);
+void insert_node_after(struct node * existing, struct node * new_node);
 
 #endif

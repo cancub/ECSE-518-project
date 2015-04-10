@@ -15,6 +15,8 @@ void to_prev(struct node ** n)
     *n = (*n)->previous;
 }
 
+
+
 void copy_and_append(struct Linked_list * from, struct Linked_list * to)
 {
     struct node * temp = from->root;
@@ -22,7 +24,7 @@ void copy_and_append(struct Linked_list * from, struct Linked_list * to)
     do
     {
         add_node(to);
-        ((to->root)->previous)->data = temp->data;
+        ((to->root)->previous)->index = temp->index;
         temp =temp->next;
 
     }while(temp != from->root);
@@ -37,7 +39,7 @@ void copy_linked_list(struct Linked_list * a, struct Linked_list * b)
 
     do 
     {
-        tempb->data = tempa->data;
+        tempb->index = tempa->index;
         tempa = tempa->next;
         tempb = tempb->next;
     }while(tempa != a->root);
@@ -45,12 +47,21 @@ void copy_linked_list(struct Linked_list * a, struct Linked_list * b)
 
 void add_node(struct Linked_list * a)
 {
-    struct node * new_node;
-    new_node = (struct node *)malloc(sizeof(struct node));
-    new_node->previous = (a->root)->previous;
-    new_node->next = a->root;
-    ((a->root)->previous)->next = new_node;
-    (a->root)->previous = new_node;
+    if (a->size > 0)
+    {
+        struct node * new_node;
+        new_node = (struct node *)malloc(sizeof(struct node));
+        new_node->previous = (a->root)->previous;
+        new_node->next = a->root;
+        ((a->root)->previous)->next = new_node;
+        (a->root)->previous = new_node;
+    }
+    else
+    {
+        a->root = (struct node *)malloc(sizeof(struct node));
+        a->root->previous = a->root;
+        a->root->next = a->root;
+    }
     a->size += 1;
 }
 
@@ -78,10 +89,10 @@ void append_node(struct Linked_list * a, struct node * n)
 
 }
 
-void add_node_location_data(struct Linked_list* a, int location, int value)
+void add_node_location_index(struct Linked_list* a, int location, int value)
 {
     add_node(a);
-    ((a->root)->previous)->data = value;
+    ((a->root)->previous)->index = value;
 
     move_from_to_index(a, (int)(a->size - 1), location);
 }
@@ -91,7 +102,7 @@ void remove_node(struct Linked_list * a, struct node * to_remove)
 {
     if(a->root == to_remove)
     {
-        a->root = to_remove->next;
+        a->root = a->root->next;
     }
 
     (to_remove->next)->previous = to_remove->previous;
@@ -111,7 +122,7 @@ int search_for_num(struct Linked_list * a, int value)
 
     do
     {
-        if (test->data == value)
+        if (test->index == value)
         {
             result = 1;
             break;
@@ -133,16 +144,19 @@ struct Linked_list * initialize_linked_list(int size)
 
     a->size = 0;
 
-    a->root = (struct node*)malloc(sizeof(struct node));
+    if(size > 0)
+    {
+        a->root = (struct node*)malloc(sizeof(struct node));
 
-    a->root->next = a->root;
-    a->root->previous = a->root;
+        a->root->next = a->root;
+        a->root->previous = a->root;
 
-    // ((a->root)->edges).size == 0;
+        // ((a->root)->edges).size == 0;
 
-    for(i = 1; i < size; i++)
-    {   
-        add_node(a);
+        for(i = 1; i < size; i++)
+        {   
+            add_node(a);
+        }
     }
 
     return a;
@@ -156,7 +170,7 @@ void randomize_linked_list(struct Linked_list * a, int max)
 
     do
     {   
-        temp->data = rand() % max;
+        temp->index = rand() % max;
         temp = temp->next;
     }while(temp != a->root);
 }
@@ -273,6 +287,7 @@ void delete_linked_list(struct Linked_list * a)
         do
         {   
             temp2 = temp1->next;
+            // free(&(temp1->edges));
             free(temp1);
             // printf("here\n");
             temp1 = temp2;
@@ -280,6 +295,7 @@ void delete_linked_list(struct Linked_list * a)
     }
 
     free(a->root);
+    free(a);
 }
 
 void print_linked_list(struct Linked_list * a)
@@ -292,7 +308,7 @@ void print_linked_list(struct Linked_list * a)
     do
     {
 
-        printf("link[%d] = \t%s",temp->data, (temp->hyperlink));
+        printf("link[%d] = \t%s",temp->index, (temp->hyperlink));
 
         if ((int)((temp->edges).size) > 0)
         {
@@ -314,9 +330,9 @@ int get_array_max(struct Linked_list * a, int start)
 
     for(;start < a->size; test = test->next)
     {
-        if (test->data > max)
+        if (test->index > max)
         {
-            max = test->data;
+            max = test->index;
         }
         start++;
     }
@@ -360,4 +376,30 @@ void concatenate_lists(struct Linked_list * a, struct Linked_list * b)
     free(b);
 
     // print_linked_list(a);
+}
+
+void insert_node_before(struct node * existing, struct node * new_node)
+{
+    //add the links for the new node
+    new_node->next = existing;
+    new_node->previous = existing->previous;
+
+    //modify the links for the old node
+    existing->previous = new_node;
+
+    //modify the links for the node before the old node
+    new_node->previous->next = new_node;
+}
+
+void insert_node_after(struct node * existing, struct node * new_node)
+{
+    //add the links for the new node
+    new_node->previous = existing;
+    new_node->next = existing->next;
+
+    //modify the links for the old node
+    existing->next = new_node;
+
+    //modify the links for the node before the old node
+    new_node->next->previous = new_node;
 }
