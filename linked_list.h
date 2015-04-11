@@ -9,7 +9,7 @@ struct node
 	// for our purposes in webcrawler, we will use data for the index of the link
     int index;
     struct node *next;
-    struct node *previous;
+    struct node *prev;
     char * hyperlink;
     char * filtered_hyperlink;
     struct Array edges;

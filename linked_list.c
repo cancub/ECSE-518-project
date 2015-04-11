@@ -12,7 +12,7 @@ void to_next(struct node ** n)
 
 void to_prev(struct node ** n)
 {
-    *n = (*n)->previous;
+    *n = (*n)->prev;
 }
 
 
@@ -24,7 +24,7 @@ void copy_and_append(struct Linked_list * from, struct Linked_list * to)
     do
     {
         add_node(to);
-        ((to->root)->previous)->index = temp->index;
+        ((to->root)->prev)->index = temp->index;
         temp =temp->next;
 
     }while(temp != from->root);
@@ -51,15 +51,15 @@ void add_node(struct Linked_list * a)
     {
         struct node * new_node;
         new_node = (struct node *)malloc(sizeof(struct node));
-        new_node->previous = (a->root)->previous;
+        new_node->prev = (a->root)->prev;
         new_node->next = a->root;
-        ((a->root)->previous)->next = new_node;
-        (a->root)->previous = new_node;
+        ((a->root)->prev)->next = new_node;
+        (a->root)->prev = new_node;
     }
     else
     {
         a->root = (struct node *)malloc(sizeof(struct node));
-        a->root->previous = a->root;
+        a->root->prev = a->root;
         a->root->next = a->root;
     }
     a->size += 1;
@@ -68,31 +68,31 @@ void add_node(struct Linked_list * a)
 void append_node(struct Linked_list * a, struct node * n)
 {
     // printf("a->size = %d\n",a->size );
-    // printf("previous link = %s, next link = %s\n",a->root->previous->hyperlink, a->root->next->hyperlink );
+    // printf("prev link = %s, next link = %s\n",a->root->prev->hyperlink, a->root->next->hyperlink );
     if(a->size == 0)
     {
         free(a->root);
         a->root = n;
-        n->previous = n;
+        n->prev = n;
         n->next = n;
         a->size += 1;
     }
     else
     {        
-        n->previous = (a->root)->previous;
+        n->prev = (a->root)->prev;
         n->next = a->root;
-        ((a->root)->previous)->next = n;
-        (a->root)->previous = n;
+        ((a->root)->prev)->next = n;
+        (a->root)->prev = n;
         a->size += 1;
     }
-    // printf("previous link = %s, next link = %s\n",a->root->previous->hyperlink, a->root->next->hyperlink );
+    // printf("prev link = %s, next link = %s\n",a->root->prev->hyperlink, a->root->next->hyperlink );
 
 }
 
 void add_node_location_index(struct Linked_list* a, int location, int value)
 {
     add_node(a);
-    ((a->root)->previous)->index = value;
+    ((a->root)->prev)->index = value;
 
     move_from_to_index(a, (int)(a->size - 1), location);
 }
@@ -105,11 +105,11 @@ void remove_node(struct Linked_list * a, struct node * to_remove)
         a->root = a->root->next;
     }
 
-    (to_remove->next)->previous = to_remove->previous;
-    (to_remove->previous)->next = to_remove->next;
+    (to_remove->next)->prev = to_remove->prev;
+    (to_remove->prev)->next = to_remove->next;
 
     free(to_remove->next);
-    free(to_remove->previous);
+    free(to_remove->prev);
     a->size -= 1;
 
 }
@@ -144,12 +144,14 @@ struct Linked_list * initialize_linked_list(int size)
 
     a->size = 0;
 
+    a->root = NULL;
+
     if(size > 0)
     {
         a->root = (struct node*)malloc(sizeof(struct node));
 
         a->root->next = a->root;
-        a->root->previous = a->root;
+        a->root->prev = a->root;
 
         // ((a->root)->edges).size == 0;
 
@@ -204,10 +206,10 @@ struct node * pop_node(struct Linked_list * a, int index)
         a->root = (a->root)->next;
     }
 
-    (temp->previous)->next = temp->next;
-    (temp->next)->previous = temp->previous;
+    (temp->prev)->next = temp->next;
+    (temp->next)->prev = temp->prev;
     temp->next = NULL;
-    temp->previous = NULL;
+    temp->prev = NULL;
 
     return temp;
 }
@@ -226,7 +228,7 @@ void move_from_to_index(struct Linked_list * a,int from_index,int to_index)
         } 
         else if((from_index == a->size-1) && (to_index == 0))
         {
-            a->root = (a->root)->previous;
+            a->root = (a->root)->prev;
         }
         else
         {
@@ -235,15 +237,15 @@ void move_from_to_index(struct Linked_list * a,int from_index,int to_index)
 
             old = get_node_at_index(a,to_index);
 
-            (to_move->previous)->next = to_move->next;
-            (to_move->next)->previous = to_move->previous;
+            (to_move->prev)->next = to_move->next;
+            (to_move->next)->prev = to_move->prev;
 
             if(to_index < from_index)
             {
                 to_move->next = old;
-                to_move->previous = old->previous;
-                (old->previous)->next = to_move;
-                old->previous = to_move;
+                to_move->prev = old->prev;
+                (old->prev)->next = to_move;
+                old->prev = to_move;
 
                 if(to_index == 0)
                 {
@@ -259,8 +261,8 @@ void move_from_to_index(struct Linked_list * a,int from_index,int to_index)
                 }
 
                 to_move->next = old->next;
-                to_move->previous = old;
-                (old->next)->previous = to_move;
+                to_move->prev = old;
+                (old->next)->prev = to_move;
                 old->next = to_move;
                 
             }
@@ -362,12 +364,12 @@ void concatenate_lists(struct Linked_list * a, struct Linked_list * b)
 {
 
     int new_size = a->size + b->size;
-    struct node * a_last = a->root->previous;
-    struct node * b_last = b->root->previous;
+    struct node * a_last = a->root->prev;
+    struct node * b_last = b->root->prev;
 
-    a->root->previous = b_last;
+    a->root->prev = b_last;
     a_last->next = b->root;
-    b->root->previous = a_last;
+    b->root->prev = a_last;
     b_last->next = a->root;
 
     a->size = new_size;
@@ -382,24 +384,24 @@ void insert_node_before(struct node * existing, struct node * new_node)
 {
     //add the links for the new node
     new_node->next = existing;
-    new_node->previous = existing->previous;
+    new_node->prev = existing->prev;
 
     //modify the links for the old node
-    existing->previous = new_node;
+    existing->prev = new_node;
 
     //modify the links for the node before the old node
-    new_node->previous->next = new_node;
+    new_node->prev->next = new_node;
 }
 
 void insert_node_after(struct node * existing, struct node * new_node)
 {
     //add the links for the new node
-    new_node->previous = existing;
+    new_node->prev = existing;
     new_node->next = existing->next;
 
     //modify the links for the old node
     existing->next = new_node;
 
     //modify the links for the node before the old node
-    new_node->next->previous = new_node;
+    new_node->next->prev = new_node;
 }

@@ -11,37 +11,388 @@
 
 #define SIZE        10
 
+char * switch_order(char * url)
+{
+
+    char ** pieces = (char **)malloc(sizeof(char *)*3);
+    char * stops = (char *)malloc(sizeof(char)*3);
+
+    // http://(www.google.com) or http://(google.com)
+    char * beginning = strstr(url, "//");
+    char * middle, * end, *path, * newurl, * testurl;
+
+    testurl = NULL;
+
+    if(beginning == NULL)
+    {
+        // if there isn't http(s):// for some reason
+        free(pieces);
+        free(stops);
+        if(testurl != NULL)
+            free(testurl);
+        return NULL;
+    }
+    else
+    {
+        beginning = &(beginning[2]);
+    }
+
+    // printf("%s %s %s\n",beginning,(strchr(strchr(beginning,'.')+1,'.')),strchr(beginning,'/'));
+
+    if( (strchr(strchr(beginning,'.')+1,'.') == NULL) || 
+        ((strchr(strchr(beginning,'.')+1,'.') > strchr(beginning,'/')) &&
+        (strchr(strchr(beginning,'.')+1,'.') != NULL) && (strchr(beginning,'/') != NULL)))
+    {
+        // printf("here1\n");
+        // we have a link with only one period
+        // add a www to the beginning of beginning
+        testurl = (char *)malloc(strlen("www.") + strlen(beginning) + 1);     
+        testurl[4 + strlen(beginning)] = '\0';
+
+        strcpy(testurl,"www.");
+        strcpy(&(testurl[4]),beginning);
+        testurl[4 /* "www." */ + strlen(beginning)] = '\0';
+        beginning = testurl;
+    }
+
+    int final_length = (int)(strlen(beginning)) +1;
+
+    // find the next location for the slash, as this seperates the part
+    // of the link we want to switch from the rest we want to leave alone
+
+    // www.google.com(/asndalkndasa) or google.com(NULL)
+    char * seperator = strchr(beginning,'/');
+
+    // this will be our first split in the code: either there is a / after the main link or 
+    // we just have the basic link
+    if(seperator == NULL)
+    {
+        // if the slash does not exist (e.g http://google.com or http://www.google.com )
+        seperator = "\0";
+
+        // www.(google.com) or google.(com)
+        middle = strchr(beginning,'.') + 1;
+
+        if (middle == NULL)
+        {
+            // there were no periods in the link, WTF?
+            free(pieces);
+            free(stops);
+            if(testurl != NULL)
+                free(testurl);
+            return NULL;
+        }
+
+        // www.google.(com) or google.com(NULL)
+        end  = strchr(middle,'.') + 1;
+
+        if(end == NULL)
+        {
+            // there was no second period, so we have to re-evaluate what we think of
+            // as beginning, middle and end
+            end = middle;   //(com)
+            middle = beginning; //(google.com)
+            beginning = "www.";            
+            final_length += 4;
+
+        }
+    }
+    else
+    {
+        //we do have a character that separates the main link from the path
+
+        // www.(google.com/sadasdsa) or www.(google.com/) or google.(com/asda.ssa) or google.(com/)
+        middle = strchr(beginning,'.') + 1;
+
+        if (middle == NULL)
+        {
+            // there were no periods in the link, WTF?
+            free(pieces);
+            free(stops);
+            if(testurl != NULL)
+                free(testurl);
+            return NULL;
+        }
+
+        // www.google.(com/sadasdsa) or www.google.(com/) or google.com/(NULL) or google.com/adasds.(asdads)
+        end  = strchr(middle,'.') + 1;
+
+        if((end == NULL) || ((int)(end-seperator) > 0))
+        {
+            // there was no second period or it's a vestigal period in the path
+            // so we have to re-evaluate what we think of as beginning, middle and end
+            end = middle;   //(com/asdadasd) or (com/asdsa.asdasd) or (com/)
+            middle = beginning; //(google.com/asdsadsa.asdsda)
+            beginning = "www."; 
+            final_length += 4;
+
+        }
+
+
+        seperator = "/";
+
+    }
+
+    // for strange links like www.alumni.mcgill.ca with a useless (www.)
+    if( (strchr(end,'/') - strchr(end,'.') > 0) && (strchr(end,'.') != NULL))
+    {
+        // bump everything up one
+        beginning = middle;         //(www.alumni.mcgill.ca) --> www.(alumni.mcgill.ca)
+        middle = end;               //www.(alumni.mcgill.ca) --> www.alumni.(mcgill.ca)
+        end = strchr(end,'.') + 1;  //www.alumni.(mcgill.ca) --> www.alumni.mcgill.(ca)
+    }
+
+
+    newurl = (char *)malloc(final_length);
+
+    // set up both the pieces of the url we will look at and the characters that we will look for
+    // in order to shift to the next pointer
+    pieces[0] = end;            //(com)
+    pieces[1] = middle;         //(google.com)
+    pieces[2] = beginning;      //(www.)
+
+    // printf("\n%s\n",end );
+    // printf("%s\n", middle);
+    // printf("%s\n\n",beginning );
+    //     sleep(1);
+    // }
+
+
+
+    stops[0] = seperator[0];
+    stops[1] = '.';
+    stops[2] = '.';
+
+    int pieces_stops_count = 0;
+    int url_count = 0;
+    int i;
+
+    do
+    {
+        //step through each of the pieces
+        i = 0;
+
+        // add each of the characters from this pieces until we find a character that matches
+        // the stopping character for this piece
+        while(pieces[pieces_stops_count][i] != stops[pieces_stops_count])
+        {
+            newurl[url_count++] = pieces[pieces_stops_count][i++];
+            // printf("newurl = %s, sizeof(newurl) = %d\n",newurl, (int)(strlen(newurl)) );
+        }
+
+        // printf("\n");
+
+        if(pieces_stops_count < 2)
+        {
+            newurl[url_count++] = '.';
+            // printf("newurl = %s, sizeof(newurl) = %d\n",newurl, (int)(strlen(newurl)) );
+        }
+
+        // move to the next piece
+        pieces_stops_count++;
+
+    }while(pieces_stops_count < 3);
+
+
+    // printf("\n");
+
+    if(stops[0] == '/')
+    {
+        // http://(www.google.com(/jasdkadksa)) or http://(google.com/(asdsadas))
+        path = strstr(url, "//") + 2;
+        path = strchr(path,'/');
+
+
+        i = 0;
+
+        // printf("newurl = %s, sizeof(newurl) = %d\n",newurl, (int)(strlen(newurl)) );
+        do
+        {
+            // copy the remainder of the path to the new url
+            // printf("newurl = %s, sizeof(newurl) = %d\n",newurl, (int)(strlen(newurl)) );
+            newurl[url_count++] = path[i++];
+        }while(path[i] != '\0');
+    } 
+
+    // copy the terminator
+    newurl[url_count] = '\0';
+
+    //clean up;
+    free(pieces);
+    free(stops);
+    if(testurl != NULL)
+        free(testurl);
+
+    // for(i = 0; i < strlen(newurl); i++)
+    // {
+    //     if( (newurl[i] > '~') || (newurl[i] < '!') )
+    //     {
+    //         // printf("Error with \"%s\"\nOffending character: newurl[%d] = %c, length = %d\n",newurl, i,newurl[i], (int)(strlen(newurl)) );
+    //         return NULL;
+    //     }
+    // }
+
+    return newurl;
+}
+
+int first_after_second(char * a, char * b)
+{
+    if(a[0] == '\0' && b[0] != '\0')
+    {
+        return 0;
+    }
+    else if(b[0] == '\0' && a[0] != '\0')
+    {
+        return 1;
+    }
+    else if(b[0] == '\0' && a[0] == '\0')
+    {
+        return 3;
+    }
+    else
+    {
+        if(a[0] > b[0])
+        {
+            return 1;
+        }
+        else if(a[0] < b[0])
+        {
+            return 0;
+        }
+        else
+        {
+            return first_after_second(&(a[1]),&(b[1]));
+        }
+    }
+}
+
+void add_link_in_order(struct Linked_list * a, char * str)
+{
+    struct node * temp = a->root;   // to loop through the list
+    int test;   // to test the order
+    struct node * new_node = (struct node*)malloc(sizeof(struct node));   // this will hold all the link's node info
+    
+    new_node->hyperlink = (char*)malloc(strlen(str)+1);     // we will store both the regular and filtered links
+    new_node->filtered_hyperlink = (char*)malloc(strlen(str)+1);
+    char * temp_string = switch_order(str);
+    strcpy(new_node->filtered_hyperlink,temp_string);
+    strcpy(new_node->hyperlink,str);
+
+    if(a->root == NULL)
+    {
+        //this is the first link that we are inputing into
+        // the linked list so we don't need to care about anything really
+        // just put it at the front and don't worry about sorting
+        new_node->index = 1;
+        new_node->next = new_node;
+        new_node->prev = new_node;
+        a->root = new_node;
+        return;
+    }
+    else
+    {
+        // there are other nodes in the list, so we seek out this link's place in the list
+        do
+        {   
+            test = first_after_second(temp->filtered_hyperlink,new_node->filtered_hyperlink);
+            if(test == 1 || test == 3)
+            {   
+                //we've determined that the input link is either the same as the link we're looking
+                // at with temp or that the str, lexigraphically, comes before temp.
+                // thus we insert it before temp
+                new_node->index = temp->index;
+                if(new_node->index == 1)
+                {
+                    // must move the root if this is the first link
+                    a->root = new_node;
+                }
+
+                // push the node to the proper location (just before the last node we tested)
+                insert_node_before(temp,new_node);
+
+                do
+                {
+                    // incriment all the indices of the links after this node
+                    temp->index += 1;
+                    temp = temp->next;
+                } while (temp != a->root);
+
+                //we're done
+                return;
+            }
+            temp = temp->next;
+        } while (temp != a->root);
+    }
+
+    if(temp == a->root)
+    {
+        // we've made it to the point where we know that this new link is higher, lexigraphically, than all the other links
+        // so we add it to the end
+        new_node->index = a->root->prev->index + 1;
+        append_node(a,new_node);
+    }
+
+    free(temp_string);
+}
+
+
 int main()
 {
+
+    // printf("%d\n",first_after_second("test","test") );
     struct Linked_list * test = initialize_linked_list(0);
+    FILE * ifp = fopen("filtered_links.txt","r");
+    char stupid[2500];
+    char * stupid_new;
+    if(ifp == NULL)
+    {
+        printf("could not open file\n");
+        return(-1);
+    }
 
 
     int i = 0;
 
-    for(i = 0; i < SIZE; i++)
-    {
-       add_node(test); 
-    }
+    // for(i = 0; i < SIZE; i++)
+    // {
+    //     // get hyperlink here, find it's location and insert it into the linked list
+        
+    //     // add_node(test); 
+    // }
     
     struct node * temp = test->root;
 
     i = 1;
     do
-    {   
-        temp->index = i++;
+    {  
+        fgets(stupid,2500,ifp);
+        stupid[strlen(stupid)-1] = '\0';
+        add_link_in_order(test,stupid_new);
+        temp->index = i++;  
         temp = temp->next;
+        free(stupid_new);
     } while (temp!=test->root);
 
     temp = test->root;
 
     do
     {   
-        printf("index is %d\n",temp->index );
+        printf("index is %d, link is %s\n",temp->index, temp->filtered_hyperlink );
         temp = temp->next;
     } while (temp!=test->root);
 
 
+
+
+    // free(stupid);
+    temp = test->root;
+    do
+    {
+        free(temp->filtered_hyperlink);
+        temp = temp->next;
+    } while (temp!=test->root);
     delete_linked_list(test);
+    fclose(ifp);
 
     return 0;
 }
