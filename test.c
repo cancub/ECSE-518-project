@@ -134,7 +134,8 @@ char * switch_order(char * url)
     }
 
     // for strange links like www.alumni.mcgill.ca with a useless (www.)
-    if( (strchr(end,'/') - strchr(end,'.') > 0) && (strchr(end,'.') != NULL))
+    if( (strchr(end,'/') - strchr(end,'.') > 0) && (strchr(end,'.') != NULL) && 
+        (strstr(beginning,"www") == beginning))
     {
         // bump everything up one
         beginning = middle;         //(www.alumni.mcgill.ca) --> www.(alumni.mcgill.ca)
@@ -237,6 +238,9 @@ char * switch_order(char * url)
 
 int first_after_second(char * a, char * b)
 {
+    // returns 1 if "a" lexicographically comes after "b",
+    //  0 if "b" comes after "a" and 3 if they are the same
+    // string
     if(a[0] == '\0' && b[0] != '\0')
     {
         return 0;
@@ -266,39 +270,60 @@ int first_after_second(char * a, char * b)
     }
 }
 
-void add_link_in_order(struct Linked_list * a, char * str)
+void add_link_string(struct node * n, char * link)
 {
-    struct node * temp = a->root;   // to loop through the list
-    int test;   // to test the order
-    struct node * new_node = (struct node*)malloc(sizeof(struct node));   // this will hold all the link's node info
-    
-    new_node->hyperlink = (char*)malloc(strlen(str)+1);     // we will store both the regular and filtered links
-    new_node->filtered_hyperlink = (char*)malloc(strlen(str)+1);
-    char * temp_string = switch_order(str);
-    strcpy(new_node->filtered_hyperlink,temp_string);
-    strcpy(new_node->hyperlink,str);
+    n->hyperlink = (char*)malloc(strlen(link)+1);
+    strcpy(n->hyperlink, link);
+    n->filtered_hyperlink = switch_order(link);
+}
+
+void remove_links(struct Linked_list *a)
+{
+    struct node * temp = a->root;
+
+    do
+    {
+        free(temp->hyperlink);
+        free(temp->filtered_hyperlink);
+        to_next(&temp);
+    } while (temp != a->root);
+}
+
+void free_LL(struct Linked_list * a)
+{
+    remove_links(a);
+    delete_linked_list(a);
+    free(a);
+}
+
+struct node * add_sorted_link(struct Linked_list * a, char * str)
+{
+    // struct node * temp = a->root;   
+    // int test;   // to test the order
 
     if(a->root == NULL)
     {
         //this is the first link that we are inputing into
         // the linked list so we don't need to care about anything really
         // just put it at the front and don't worry about sorting
-        new_node->index = 1;
-        new_node->next = new_node;
-        new_node->prev = new_node;
-        a->root = new_node;
-        return;
+        add_node(a);
+        a->root->index = 1;
+        add_link_string(a->root,str);
+        return a->root;
     }
     else
     {
+        struct node * new_node = (struct node*)malloc(sizeof(struct node));   // this will hold all the link's node info
+        struct node * temp = a->root; // to loop through the list
+        add_link_string(new_node,str);
+        int test;
         // there are other nodes in the list, so we seek out this link's place in the list
         do
         {   
             test = first_after_second(temp->filtered_hyperlink,new_node->filtered_hyperlink);
-            if(test == 1 || test == 3)
+            if(test == 1)
             {   
-                //we've determined that the input link is either the same as the link we're looking
-                // at with temp or that the str, lexigraphically, comes before temp.
+                //we've determined that the str, lexigraphically, comes before temp.
                 // thus we insert it before temp
                 new_node->index = temp->index;
                 if(new_node->index == 1)
@@ -309,89 +334,152 @@ void add_link_in_order(struct Linked_list * a, char * str)
 
                 // push the node to the proper location (just before the last node we tested)
                 insert_node_before(temp,new_node);
+                a->size += 1;
+
+                if (temp == a->root)
+                {
+                    a->root = new_node;
+                }
 
                 do
                 {
                     // incriment all the indices of the links after this node
                     temp->index += 1;
-                    temp = temp->next;
+                    to_next(&temp);
                 } while (temp != a->root);
 
                 //we're done
-                return;
+                return new_node;
             }
-            temp = temp->next;
+            else if (test == 3)
+            {
+                // the links appear to be the same, but it might just be the filtered hyperlinks,
+                // implying that one is https and the other http
+                if(strstr(temp->hyperlink,"https")!= NULL && strstr(new_node->hyperlink,"https") == NULL)
+                {
+                    //we've determined that the str, lexigraphically, comes before temp.
+                    // thus we insert it before temp
+                    new_node->index = temp->index;
+                    if(new_node->index == 1)
+                    {
+                        // must move the root if this is the first link
+                        a->root = new_node;
+                    }
+
+                    // push the node to the proper location (just before the last node we tested)
+                    insert_node_before(temp,new_node);
+                    a->size += 1;
+
+                    if (temp == a->root)
+                    {
+                        a->root = new_node;
+                    }
+
+                    do
+                    {
+                        // incriment all the indices of the links after this node
+                        temp->index += 1;
+                        to_next(&temp);
+                    } while (temp != a->root);
+
+                    //we're done
+                    return new_node;
+                } 
+                else if (strstr(temp->hyperlink,"https") == NULL && strstr(new_node->hyperlink,"https") != NULL)
+                {
+                    // it's the opposite, with the new link being the secure link and thus coming after the
+                    // link already in the list
+                    new_node->index = temp->index + 1;
+
+                    // push the node to the proper location (just after the last node we tested)
+                    insert_node_after(temp,new_node);
+                    a->size += 1;
+
+                    to_next(&temp);
+                    while (temp != a->root)
+                    {
+                        // incriment all the indices of the links after this node
+                        temp->index += 1;
+                        to_next(&temp);
+                    }
+
+                    //we're done
+                    return new_node;
+                } 
+                else
+                {
+                    // we should not have made it this far if the link already exists in the list
+                    // therefor there has been an error in a previous function
+                    printf("----------------------------\n");
+                    printf("Error: repeated link %s from %s\n",new_node->filtered_hyperlink, new_node->hyperlink);
+                    printf("is the same as %d: %s from %s\n",(int)(temp->index),temp->filtered_hyperlink, 
+                        temp->hyperlink);
+                    printf("input link is \"%s\"\n",str );
+                    printf("---------------------------\n");
+                    free(new_node->hyperlink);
+                    free(new_node->filtered_hyperlink);
+                    free(new_node);
+                    return NULL;
+                    // exit(0);
+                }
+            }
+            else
+            {
+                // the link in temp comes before the link under test, str
+                // move to the next link in the list
+                to_next(&temp);
+            }
         } while (temp != a->root);
-    }
 
-    if(temp == a->root)
-    {
-        // we've made it to the point where we know that this new link is higher, lexigraphically, than all the other links
-        // so we add it to the end
-        new_node->index = a->root->prev->index + 1;
-        append_node(a,new_node);
+        if(temp == a->root)
+        {
+            // we've made it to the point where we know that this new link is higher, lexigraphically, than all the other links
+            // so we add it to the end
+            new_node->index = a->root->prev->index + 1;
+            append_node(a,new_node);
+            return new_node;
+        }
     }
-
-    free(temp_string);
 }
 
 
 int main()
 {
-
-    // printf("%d\n",first_after_second("test","test") );
-    struct Linked_list * test = initialize_linked_list(0);
+    int LL_size = 4000;
+    struct Linked_list * LL = initialize_linked_list(0);
     FILE * ifp = fopen("filtered_links.txt","r");
-    char stupid[2500];
-    char * stupid_new;
+    char fgets_str[2500];
+    char * test;
     if(ifp == NULL)
     {
         printf("could not open file\n");
         return(-1);
     }
-
-
     int i = 0;
 
-    // for(i = 0; i < SIZE; i++)
-    // {
-    //     // get hyperlink here, find it's location and insert it into the linked list
-        
-    //     // add_node(test); 
-    // }
-    
-    struct node * temp = test->root;
-
-    i = 1;
     do
     {  
-        fgets(stupid,2500,ifp);
-        stupid[strlen(stupid)-1] = '\0';
-        add_link_in_order(test,stupid_new);
-        temp->index = i++;  
-        temp = temp->next;
-        free(stupid_new);
-    } while (temp!=test->root);
-
-    temp = test->root;
-
-    do
-    {   
-        printf("index is %d, link is %s\n",temp->index, temp->filtered_hyperlink );
-        temp = temp->next;
-    } while (temp!=test->root);
+        test = fgets(fgets_str,2500,ifp);
+        if(test != NULL)
+        {
+            fgets_str[strlen(fgets_str)-1] = '\0';
+            // printf("\n\nadding %s\n",fgets_str );
+            add_sorted_link(LL,fgets_str);
+            LL_size--;
+        }
+        else
+            break;
+    } while (LL_size > 0);
 
 
+    // struct node * temp = LL->root;
+    // do
+    // {   
+    //     printf("index is %d, link is %s\n",temp->index, temp->filtered_hyperlink );
+    //     to_next(&temp);
+    // } while (temp!=LL->root);
 
-
-    // free(stupid);
-    temp = test->root;
-    do
-    {
-        free(temp->filtered_hyperlink);
-        temp = temp->next;
-    } while (temp!=test->root);
-    delete_linked_list(test);
+    free_LL(LL);
     fclose(ifp);
 
     return 0;
@@ -402,24 +490,24 @@ int main()
 
 // struct node
 // {
-// 	int index;
-// 	struct node * prev;
-// 	struct node * next;
-// 	char * link;
-// 	int ** edges_to;
+//  int index;
+//  struct node * prev;
+//  struct node * next;
+//  char * link;
+//  int ** edges_to;
 // };
 
 // struct nodeArray
 // {
-// 	struct node * root;
-// 	size_t size;
+//  struct node * root;
+//  size_t size;
 // };
 
 
 // int main()
 // {
-//     int i,j, size = 5;	// number of links
-//     FILE * ifp = fopen("filtered_links.txt","r");		// file from which we obtain the links
+//     int i,j, size = 5;   // number of links
+//     FILE * ifp = fopen("filtered_links.txt","r");        // file from which we obtain the links
 //     struct node * firstnode = (struct node*)malloc(sizeof(struct node));    
 //     firstnode->next = NULL;
 //     firstnode->prev = NULL;
@@ -440,36 +528,36 @@ int main()
 //     secondnode->edges_to[1] = &(secondnode->index);
     
 
-// 	printf("Link %d points to links: ", firstnode->index);
-// 	for(j = 0; j < firstnode->index; j++)
-// 	{
-// 		printf("%d ", *(firstnode->edges_to[j]));
-// 	}
-// 	printf("\n");
-// 	printf("Link %d points to links: ", secondnode->index);
-// 	for(j = 0; j < secondnode->index; j++)
-// 	{
-// 		printf("%d ", *(secondnode->edges_to[j]));
-// 	}
+//  printf("Link %d points to links: ", firstnode->index);
+//  for(j = 0; j < firstnode->index; j++)
+//  {
+//      printf("%d ", *(firstnode->edges_to[j]));
+//  }
+//  printf("\n");
+//  printf("Link %d points to links: ", secondnode->index);
+//  for(j = 0; j < secondnode->index; j++)
+//  {
+//      printf("%d ", *(secondnode->edges_to[j]));
+//  }
 
 //     firstnode->index = 25;
 //     secondnode->index = 10;
 //     printf("\n");
 
 //     printf("Link %d points to links: ", firstnode->index);
-// 	for(j = 0; j < 1; j++)
-// 	{
-// 		printf("%d ", *(firstnode->edges_to[j]));
-// 	}
-// 	// printf("%d ", *(firstnode->edges_to[0]));
-// 	printf("\n");
+//  for(j = 0; j < 1; j++)
+//  {
+//      printf("%d ", *(firstnode->edges_to[j]));
+//  }
+//  // printf("%d ", *(firstnode->edges_to[0]));
+//  printf("\n");
 
-// 	printf("Link %d points to links: ", secondnode->index);
-// 	for(j = 0; j < 2; j++)
-// 	{
-// 		printf("%d ", *(secondnode->edges_to[j]));
-// 	}
-// 	printf("\n");
+//  printf("Link %d points to links: ", secondnode->index);
+//  for(j = 0; j < 2; j++)
+//  {
+//      printf("%d ", *(secondnode->edges_to[j]));
+//  }
+//  printf("\n");
 
 //     // printf("here\n");
 //     free(secondnode->edges_to);
@@ -480,9 +568,9 @@ int main()
 //     // do
 //     // {
 
-//     // 	firstnode->next = (struct node*)malloc(sizeof(struct node*));
-//     // 	firstnode->next->next = NULL;
-//     // 	firstnode->next->prev = firstnode->next;
+//     //   firstnode->next = (struct node*)malloc(sizeof(struct node*));
+//     //   firstnode->next->next = NULL;
+//     //   firstnode->next->prev = firstnode->next;
 //     //     indices[i] = i+1;
 //     //     i++;
 //     // }while(i < size);
@@ -768,7 +856,7 @@ int main()
 
 // int main()
 // {
-// 	char url[2500];
+//  char url[2500];
 //     char * newurl;
 
 //     // FILE * ifp = fopen("filtered_links.txt", "r");
@@ -967,7 +1055,7 @@ int main()
 /*------------------------------------------------------------------------------------------------------------------*/
 // int main()
 // {
-// 	CURL *curl;
+//  CURL *curl;
 //     CURLcode curl_res;
 
 //     curl_global_init(CURL_GLOBAL_ALL);
@@ -978,7 +1066,7 @@ int main()
 //     {
 //         curl_easy_setopt(curl, CURLOPT_URL, "http://bit.ly/1zKaphR");
 //         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-//     	curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
+//      curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
 //         // curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)"); 
 
 //         /* Perform the request, curl_res will get the return code */ 

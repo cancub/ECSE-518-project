@@ -3,17 +3,21 @@
 
 #include "twodarrays.h"
 
+struct edge_ptr_array
+{
+	size_t size;
+	int *** array;	
+};
 
 struct node
 {
 	// for our purposes in webcrawler, we will use data for the index of the link
-    int data;
+    int index;
     struct node *next;
-    struct node *previous;
+    struct node *prev;
     char * hyperlink;
     char * filtered_hyperlink;
-    struct Array edges;
-
+    struct edge_ptr_array edges;
 };
 
 struct Linked_list
@@ -45,7 +49,7 @@ void copy_and_append(struct Linked_list * from, struct Linked_list * to);
 void to_next(struct node ** n);
 void to_prev(struct node ** n);
 void concatenate_lists(struct Linked_list * a, struct Linked_list * b);
-void insert_node_before(struct node * existing, struct node * new_node);
-void insert_node_after(struct node * existing, struct node * new_node);
+void insert_node_before(struct node *a, struct node * n);
+void insert_node_after(struct node *a, struct node * n);
 
 #endif
