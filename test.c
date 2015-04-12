@@ -7,28 +7,103 @@
 #include "linked_list.h"
 // #include <cblas.h>
 
-// ------------------------------Does overallocing and then reallocing to the actual size fuck with data?----------------------
+
+//---------------------adding www to the links that need it--------------------------------
+char * add_www(char * test)
+{
+    char * result;
+    char * start = strstr(test,"//")+2;
+    char * second_dot = strchr(strchr(start,'.')+1,'.');
+    char * path = strchr(start,'/');
+    int need_www = ((second_dot - path > 0) || second_dot == NULL);
+    if(path == NULL)
+        path = strchr(start,'\0');
+
+    if( need_www )
+    {
+        result = (char *)malloc(path -start + 1);
+        memset(result, '\0',path -start + 1);
+        strncpy(result,test,start-test);
+        strcpy(&(result[start-test]),"www.");
+        strcpy(&(result[start-test+4]),start);
+        return result;
+    }
+    else
+    {
+        return NULL;
+    }
+}
 
 int main()
 {
-    int * test = (int*)malloc(20*sizeof(int));
+    char * test;
+    test = add_www("http://google.com");
 
-    int i;
+    printf("test = \'%s\'\n", test);
 
-    for(i = 0; i < 10; i++)
-    {
-        test[i] = i*10;
-    }
-
-    test = (int*)realloc(test,10*sizeof(int));
-
-    for(i = 0; i < 10; i++)
-    {
-        printf("%d\n",test[i] );
-    }
+    free(test);
 
     return 0;
-} 
+}
+
+
+
+// ------------can i get the domain like this?------------------------------------------
+
+// char * get_domain(char * link)
+// {
+//     char * to_copy = strchr(link,'.')+1;
+//     char * path = strchr(to_copy,'/');
+
+//     if(path == NULL)
+//     {
+//         path = strchr(to_copy,'\0');
+//     }
+
+//     int size = path - to_copy+1;
+//     char * domain = (char*)malloc(size);
+//     strncpy(domain,to_copy, size-1);
+//     domain[size-1] = '\0';
+
+//     return domain;
+// }
+
+// int main()
+// {
+//     char * link = "http://www.google.com";
+//     char * domain = get_domain(link);
+
+//     printf("domain = %s\n",domain );
+
+//     free(domain);
+
+//     return 0;
+// }
+
+
+
+// ------------------------------Does overallocing and then reallocing to the actual size fuck with data?----------------------
+
+// int main()
+// {
+//     int * test = (int*)malloc(20*sizeof(int));
+
+//     int i;
+
+//     for(i = 0; i < 10; i++)
+//     {
+//         test[i] = i*10;
+//     }
+
+//     test = (int*)realloc(test,10*sizeof(int));
+
+//     for(i = 0; i < 10; i++)
+//     {
+//         printf("%d\n",test[i] );
+//     }
+
+//     return 0;
+// } 
 
 
 // --------------------------------------adding a new node into a linked list after another node-----------------------------------------------------------

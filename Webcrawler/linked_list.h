@@ -13,11 +13,13 @@ struct node
 {
 	// for our purposes in webcrawler, we will use data for the index of the link
     int index;
+    int depth;
     struct node *next;
     struct node *prev;
     char * hyperlink;
     char * filtered_hyperlink;
     struct edge_ptr_array * edges;
+
 };
 
 struct Linked_list

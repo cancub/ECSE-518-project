@@ -13,21 +13,21 @@
 #define BUFFLEN         2500
 #define COMPLETED       1
 #define NOT_COMPLETED   0
-#define STARTLINKS      1
 #define WAITTIME        1000
 #define RETRIES         3
 #define APPEND          1
 #define NOAPPEND        0
 
-struct link_and_index
+struct link_index_depth
 {
     int * index_ptr;
     char * str;
+    int depth;
 };
 
 struct stringArray
 {
-    struct link_and_index * array;
+    struct link_index_depth * array;
     size_t size;
 };
 
@@ -36,7 +36,6 @@ struct stringArray
 char * flip_url(char * url);
 char * add_slash(char * url);
 void * wget_wrapper(void * arg);
-void crawl_page(char * inputfile, char * newinputfile, char * parsed_links, char * raw_links);
 char * remove_extra(char * url);
 void filter_and_store(char * raw, struct Linked_list * a);
 void add_edge(struct Linked_list * a, int from_index, int to_index);
@@ -45,7 +44,8 @@ char * clean_link(char * url);
 int search_for_link(struct Linked_list * a, char * filtered_link);
 void print_string(char * string_thing);
 char * rm_invalid(char * url);
-void read_and_save(char * raw_links, struct node * node_under_wget, struct stringArray * links_to_crawl);
+void read_and_save(char * raw_links, struct node * node_under_wget, struct stringArray * links_to_crawl, 
+    char * domain);
 int ** quick_search(struct stringArray * parsed_links, char * link);
 char * remove_slash(char ** link);
 // void print_links(struct stringArray * list);
@@ -55,17 +55,18 @@ void add_link_string(struct node * n, char * link);
 void remove_links_and_edges(struct Linked_list *a);
 void free_LL(struct Linked_list * a);
 struct node * add_sorted_link(struct Linked_list * parsed_links, char * str);
-void crawl(struct node * node_under_wget, struct stringArray * links_to_crawl, char * link);
 struct node * create_node(char * str, int index);
 void print_all_info(struct node * n);
 int string_to_int(char * test);
+char * get_domain(char * link);
+char * add_www(char * test);
 
 
 int index_under_wget = 1;
 char raw_links[] = "raw_links.txt";
-int totallinks;
+int totallinks, maxdepth;
 
-int thread_test;
+// int thread_test;
 
 int main(int argc, char *argv[])
 {
@@ -77,6 +78,7 @@ int main(int argc, char *argv[])
     struct node * node_under_wget;
     struct node * temp;
     int i;
+    char * domain;
 
     FILE * ofp = fopen(output,"w");
     if(ofp == NULL)
@@ -93,51 +95,75 @@ int main(int argc, char *argv[])
     }
 
     //find the link we will start the crawl with
-    if(argc == 3)
+    if(argc == 4)
     {
         link = argv[1];
         totallinks = string_to_int(argv[2]);
+        maxdepth = string_to_int(argv[3]);
     }
-    else if (argc == 2)
+    else if (argc == 3)
+    {
+        link = argv[1];
+        totallinks = string_to_int(argv[2]);
+        maxdepth = 2;
+    }
+    else if(argc == 2)
     {
         link = argv[1];
         totallinks = 200;
+        maxdepth = 2;
     }
     else
     {
         link = "http://www.google.com";
         totallinks = 200;
+        maxdepth = 2;
     }
 
+    domain = get_domain(link);
+
+
     links_to_crawl->size = 1;
-    links_to_crawl->array = (struct link_and_index *)malloc(totallinks*sizeof(struct link_and_index));
+    links_to_crawl->array = (struct link_index_depth *)malloc(totallinks*sizeof(struct link_index_depth));
     links_to_crawl->array[0].str = (char*)malloc(strlen(link)+1);
     strcpy(links_to_crawl->array[0].str, link);
+    links_to_crawl->array[0].depth = 0;
 
-    // crawl as many links as the value of STARTLINKS dictates and append all these links'
+    // crawl as many links as the value of totallinks dictates or as deep as maxdepth and append all these links'
     // sublinks to the list of links that we will eventually crawl
     do
     {           
-        // find the next link with it's string and index
-        link = (links_to_crawl->array[index_under_wget-1]).str;
-        printf("\n-----------------------\n\nRound %d of %d:\n", index_under_wget,(int)(links_to_crawl->size));
-        printf("looking at link %s\n",link); 
-        // find where it belongs, alphabetically, in the linked list and return the pointer to that node
-        node_under_wget = add_sorted_link(parsed_links,link);
-        if(node_under_wget == NULL)
+        // find the next link with it's string and index as long as this link does not exist at the
+        // maximum depth level
+        if ((links_to_crawl->array[index_under_wget-1]).depth <= maxdepth)
         {
-            // somehow, after all our filtering, this link already exists in the parsed linked list
-            exit(0);
+            link = (links_to_crawl->array[index_under_wget-1]).str;
+            // if(strstr())
+            printf("\n-----------------------\n\nCrawl %d of %d:\n", index_under_wget,(int)(links_to_crawl->size));
+            printf("looking at link %s\n",link); 
+            printf("depth = %d\n", (links_to_crawl->array[index_under_wget-1]).depth);
+            // find where it belongs, alphabetically, in the linked list and return the pointer to that node
+            node_under_wget = add_sorted_link(parsed_links,link);
+            node_under_wget->depth = (links_to_crawl->array[index_under_wget-1]).depth;
+            if(node_under_wget == NULL)
+            {
+                // somehow, after all our filtering, this link already exists in the parsed linked list
+                exit(0);
+            }
+            // update the pointer in the links_to_crawl which points to the index of this node
+            (links_to_crawl->array[index_under_wget-1]).index_ptr = &(node_under_wget->index);
+            // crawl this link for all the hyperlinks on its page
+            printf("Beginning wget\n");
+            wget_wrapper(node_under_wget->hyperlink);
+            printf("Parsing links from wget\n");
+            read_and_save(raw_links, node_under_wget,links_to_crawl, domain);
+            // move to the next link
+            // print_all_info(node_under_wget);
+            printf("Crawl complete\n");
         }
-        // update the pointer in the links_to_crawl which points to the index of this node
-        (links_to_crawl->array[index_under_wget-1]).index_ptr = &(node_under_wget->index);
-        // crawl this link for all the hyperlinks on its page
-        crawl(node_under_wget, links_to_crawl,link);
-        // printf("root after crawl = %s\n", parsed_links->root->filtered_hyperlink );
-        // move to the next link
-        // print_all_info(node_under_wget);
         index_under_wget++;
-    }while(index_under_wget <= totallinks);
+
+    }while(/*(index_under_wget <= totallinks) && ( */index_under_wget < (int)(links_to_crawl->size));
 
     // sleep(1);
     // printf("root between crawls = %s\n", parsed_links->root->filtered_hyperlink );
@@ -178,6 +204,7 @@ int main(int argc, char *argv[])
         // printf("size = %d\n",(int)(temp->edges->size) );
         printf("link is %s\n",temp->filtered_hyperlink);
         printf("size is %d\n",(int)(temp->edges->size) );
+        // printf("depth is %d\n", temp->depth);
         if(temp->edges->array != NULL)
         {
             for(i = 0; i < temp->edges->size; i++)
@@ -218,6 +245,24 @@ int main(int argc, char *argv[])
 //
 //functions
 
+char * get_domain(char * link)
+{
+    char * to_copy = strchr(link,'.')+1;
+    char * path = strchr(to_copy,'/');
+
+    if(path == NULL)
+    {
+        path = strchr(to_copy,'\0');
+    }
+
+    int size = path - to_copy+1;
+    char * domain = (char*)malloc(size);
+    strncpy(domain,to_copy, size-1);
+    domain[size-1] = '\0';
+
+    return domain;
+}
+
 int string_to_int(char * test)
 {
     int tens = 1;
@@ -252,74 +297,40 @@ void print_all_info(struct node * n)
     }
 }
 
-void crawl(struct node * node_under_wget, struct stringArray * links_to_crawl, char * link)
+char * add_www(char * test)
 {
-    pthread_t wget;
-    int count, retry = 0;
+    char * result;
+    char * start = strstr(test,"//")+2;
+    char * second_dot = strchr(strchr(start,'.')+1,'.');
+    char * path = strchr(start,'/');
+    int need_www = ((second_dot - path > 0) || second_dot == NULL);
+    if(path == NULL)
+        path = strchr(start,'\0');
 
-    while(retry < RETRIES)
+    if( need_www )
     {
-        // we want to try several times to use wget, with increasingly long wait times
-
-        count = 0;
-
-        // set a value that we will wait to see if the thread has altered
-        thread_test = NOT_COMPLETED;
-        //start the thread which will input all the links on link's page into the raw links file
-        pthread_create(&wget,NULL,wget_wrapper,link);
-
-        // wait for either a timeout or a change in the external value by the thread
-        while((thread_test == NOT_COMPLETED) && (count < (WAITTIME*(retry+1))))
-        {
-            usleep(100000);
-            count++;
-        }
-
-
-        if (count == WAITTIME)
-        {
-            // we've timed out
-            // cancel and then either try again if we have more retries, or stop attempting
-            // to access this site
-            pthread_cancel(wget);
-            if(retry < RETRIES)
-                printf("Retrying...%d\n", retry);
-            else
-                printf("Failed to retreive links\n");
-            retry++;
-        }
-        else
-        {
-            // the thread completed successfully
-            // free the memory
-            pthread_join(wget,NULL);
-            break;
-        }
+        result = (char *)malloc(strlen(test) + 4 + 1);
+        memset(result, '\0',path -start + 1);
+        strncpy(result,test,start-test);
+        strcpy(&(result[start-test]),"www.");
+        strcpy(&(result[start-test+4]),start);
+        return result;
     }
-
-    if (retry == RETRIES)
+    else
     {
-        // we don't want a file with half finished or error ridden links
-        // so we clear it of it's contents so that read_and_save will know not to bother with
-        // this link's out edges
-        FILE * to_clear = fopen(raw_links,"w");
-        fclose(to_clear);
+        return NULL;
     }
-
-    // using the links we just found, the linked list of crawled links and the list of links we will
-    // soon crawl, parse the liks
-    read_and_save(raw_links, node_under_wget,links_to_crawl);
-
 }
 
-void read_and_save(char * raw_links, struct node * node_under_wget, struct stringArray * links_to_crawl)
+void read_and_save(char * raw_links, struct node * node_under_wget, struct stringArray * links_to_crawl, 
+    char * domain)
 {
     // open the raw links file from wget
     FILE * ifp = fopen(raw_links,"r");
     char link[2500];
     char * newlink = NULL;
     int ** to_index_ptr;
-    struct link_and_index * str_ind;
+    struct link_index_depth * str_ind;
     int i;
 
     if(ifp == NULL)
@@ -376,101 +387,120 @@ void read_and_save(char * raw_links, struct node * node_under_wget, struct strin
         {
             // while there are lines left in the file to parse, keep parsing
 
-
-            free(newlink);
-            free(test_link);
-            newlink = NULL;
-            test_link = remove_extra(link);
-
-            // determine if the links is redirected (for shortened urls)
-            if((strstr(test_link,"//goo.gl") != NULL) || (strstr(test_link,"//tinyurl") != NULL) ||
-                (strstr(test_link,"//t.co") != NULL) || (strstr(test_link,"//x.co") != NULL)||
-                (strstr(test_link,"//is.gd") != NULL) || (strstr(test_link,"//bit.ly") != NULL) ||
-                (strstr(test_link,"//flip.it") != NULL) || (strstr(test_link,"//youtu.be") != NULL) ||
-                (strstr(test_link,"//tr.im") != NULL) || (strstr(test_link,"//cli.gs") != NULL) ||
-                (strstr(test_link,"//sn.im") != NULL) || (strstr(test_link,"//hex.io") != NULL))
+            if((strstr(link,"//") != NULL) && (strstr(link,domain) != NULL))
             {
-                printf("Testing for redirect: %s\n",test_link);
+                free(newlink);
+                if(test_link != NULL)
+                    free(test_link);
+                newlink = NULL;
+                test_link = remove_extra(link);
 
-                redirected_link = redirected(test_link);
-
-                if(redirected_link != NULL)
+                // determine if the links is redirected (for shortened urls)
+                if((strstr(test_link,"//goo.gl") != NULL) || (strstr(test_link,"//tinyurl") != NULL) ||
+                    (strstr(test_link,"//t.co") != NULL) || (strstr(test_link,"//x.co") != NULL)||
+                    (strstr(test_link,"//is.gd") != NULL) || (strstr(test_link,"//bit.ly") != NULL) ||
+                    (strstr(test_link,"//flip.it") != NULL) || (strstr(test_link,"//youtu.be") != NULL) ||
+                    (strstr(test_link,"//tr.im") != NULL) || (strstr(test_link,"//cli.gs") != NULL) ||
+                    (strstr(test_link,"//sn.im") != NULL) || (strstr(test_link,"//hex.io") != NULL))
                 {
-                    newlink = remove_extra(redirected_link);
-                    free(redirected_link);
-                    printf("Changing to %s\n",newlink);
-                    // sleep();
+                    printf("Testing for redirect: \"%s\"\n",test_link);
+
+                    redirected_link = redirected(test_link);
+
+                    if((redirected_link != NULL) /* &&(strcmp(test_link,remove_extra(redirected_link)) != 0)*/ )
+                    {
+                        newlink = remove_extra(redirected_link);
+                        free(redirected_link);
+                        printf("link redirected to \"%s\"\n",newlink);
+                        // sleep();
+                    }
+                    else
+                    {
+                        printf("Not redirected\n");
+                    }
+                }
+
+                if (newlink == NULL)                              
+                    newlink = remove_extra(link);
+                
+                // free(test_link);
+                // test_link = add_www(newlink);
+
+                // if(test_link != NULL)
+                // {
+                //     newlink = test_link;
+                //     test_link = NULL;
+                // }
+                // else
+                // {
+                //     free(newlink);
+                //     newlink = remove_extra(link);
+                // }
+
+
+                // find if the link we are looking at already exists in the links we have crawled/will crawl
+                // and obtain a pointer to a pointer to the index
+                to_index_ptr = quick_search(links_to_crawl,newlink);
+
+                if(to_index_ptr != NULL)
+                {
+                    //we have found a link that has already been added to the list in a previous crawl
+
+                    for (i = 0; i < elements; i++)
+                    {
+                        // determine if we already added this link to the edges for the link being crawled
+                        if(to_index_ptr == possible_array[i])
+                            break;
+                    }
+
+                    if (i == elements)
+                    {
+                        // we have not added this link yet to the list of edges for this node
+                        possible_array[elements] = to_index_ptr;
+                        elements++;
+                    }
                 }
                 else
                 {
-                    printf("Not redirected\n");
-                }
-            }
+                    // this is a new link that does not already exist in our list
 
-            if (newlink == NULL)                              
-                newlink = remove_extra(link);
-            
-            // find if the link we are looking at already exists in the links we have crawled/will crawl
-            // and obtain a pointer to a pointer to the index
-            to_index_ptr = quick_search(links_to_crawl,newlink);
-
-            if(to_index_ptr != NULL)
-            {
-                //we have found a link that has already been added to the list in a previous crawl
-
-                for (i = 0; i < elements; i++)
-                {
-                    // determine if we already added this link to the edges for the link being crawled
-                    if(to_index_ptr == possible_array[i])
-                        break;
-                }
-
-                if (i == elements)
-                {
-                    // we have not added this link yet to the list of edges for this node
-                    possible_array[elements] = to_index_ptr;
-                    elements++;
-                }
-            }
-            else
-            {
-                // this is a new link that does not already exist in our list
-
-                if (links_to_crawl->size < totallinks)
-                {
-                    // only add the link to the newly discovered node if we are in the initial stages of
-                    // link apprehension
-
-                    // make room for the new link
-                    links_to_crawl->size += 1;
-                    // links_to_crawl->array = (struct link_and_index *)realloc(links_to_crawl->array, 
-                    //     ((int)(links_to_crawl->size)+10)*sizeof(struct link_and_index));
-
-
-                    if(links_to_crawl->array == NULL)
+                    if (links_to_crawl->size < totallinks)
                     {
-                        printf("Error in allocating memory for link\n");
+                        // only add the link to the newly discovered node if we are in the initial stages of
+                        // link apprehension
+
+                        // make room for the new link
+                        links_to_crawl->size += 1;
+                        // links_to_crawl->array = (struct link_index_depth *)realloc(links_to_crawl->array, 
+                        //     ((int)(links_to_crawl->size)+10)*sizeof(struct link_index_depth));
+
+
+                        if(links_to_crawl->array == NULL)
+                        {
+                            printf("Error in allocating memory for link\n");
+                        }
+                        // else
+                        // {
+                        //     printf("total links = %d\n",(int)(links_to_crawl->size) );
+                        // }
+
+                        // add the link and it's (NULL to begin with) pointer to the index to the end
+                        // of the links_to_crawl
+                        str_ind = &((links_to_crawl->array)[(int)(links_to_crawl->size)-1]);
+                        str_ind->index_ptr = NULL;
+                        str_ind->str = (char*)malloc((int)(strlen(newlink))+1);
+                        str_ind->depth = (links_to_crawl->array)[index_under_wget-1].depth +1;
+                        strcpy(str_ind->str, newlink);
+
+                        possible_array[elements] = &(str_ind->index_ptr);
+                        elements++;
+                        added++;
+                        // for(i = 0; i < elements; i++)
+                        // {
+                        //     printf("%p ",(void*)(*(possible_array[i])) );
+                        // }
+                        // printf("\n");
                     }
-                    // else
-                    // {
-                    //     printf("total links = %d\n",(int)(links_to_crawl->size) );
-                    // }
-
-                    // add the link and it's (NULL to begin with) pointer to the index to the end
-                    // of the links_to_crawl
-                    str_ind = &((links_to_crawl->array)[(int)(links_to_crawl->size)-1]);
-                    str_ind->index_ptr = NULL;
-                    str_ind->str = (char*)malloc((int)(strlen(newlink))+1);
-                    strcpy(str_ind->str, newlink);
-
-                    possible_array[elements] = &(str_ind->index_ptr);
-                    elements++;
-                    added++;
-                    // for(i = 0; i < elements; i++)
-                    // {
-                    //     printf("%p ",(void*)(*(possible_array[i])) );
-                    // }
-                    // printf("\n");
                 }
             }
         }
@@ -522,6 +552,7 @@ char * redirected(char * original)
     if (curl)
     {
         curl_easy_setopt(curl, CURLOPT_URL, original);
+        curl_easy_setopt(curl,CURLOPT_TIMEOUT,10);
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
         curl_easy_setopt(curl, CURLOPT_NOBODY, 1);
         // curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)"); 
@@ -597,7 +628,7 @@ int ** quick_search(struct stringArray * links_to_crawl, char * link)
 
     int i,j;
     int length = strlen(link);
-    struct link_and_index * testlink;
+    struct link_index_depth * testlink;
 
     for(i = 0;i<links_to_crawl->size;i++)
     {
@@ -670,7 +701,7 @@ void * wget_wrapper(void * arg)
     // this is the template for the wget, we replace the x with the url we want to
     // crawl and the y at the very end with the location of the file we are dumping the
     // raw urls into
-    char wget1[] = "wget -q \'";
+    char wget1[] = "wget -q --read-timeout=3 --tries=3 \'";
     char wget2[] = "\' -O - | tr \"\\t\\r\\n'\" '   \"' | grep -i -o '\
 <a[^>]\\+href[ ]*=[ \\t]*\"\\(ht\\|f\\)tps\\?:[^\"]\\+\"' |\
 sed -e 's/^.*\"\\([^\"]\\+\\)\".*$/\\1/g' > "; 
@@ -710,14 +741,14 @@ sed -e 's/^.*\"\\([^\"]\\+\\)\".*$/\\1/g' > ";
     // call the wget
     // printf("%s\n",final_wget );
 
-    printf("Running wget\n");
+    // printf("Running wget\n");
     system(final_wget);
 
     // sleep(1);
 
     free(final_wget);
 
-    thread_test = COMPLETED;
+    // thread_test = COMPLETED;
 
     return NULL;
 
@@ -749,13 +780,11 @@ char * switch_order(char * url)
         beginning = &(beginning[2]);
     }
 
-    // printf("%s %s %s\n",beginning,(strchr(strchr(beginning,'.')+1,'.')),strchr(beginning,'/'));
 
     if( (strchr(strchr(beginning,'.')+1,'.') == NULL) || 
         ((strchr(strchr(beginning,'.')+1,'.') > strchr(beginning,'/')) &&
         (strchr(strchr(beginning,'.')+1,'.') != NULL) && (strchr(beginning,'/') != NULL)))
     {
-        // printf("here1\n");
         // we have a link with only one period
         // add a www to the beginning of beginning
         testurl = (char *)malloc(strlen("www.") + strlen(beginning) + 1);     
