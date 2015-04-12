@@ -7,79 +7,111 @@
 #include "linked_list.h"
 // #include <cblas.h>
 
-
-//---------------------adding www to the links that need it--------------------------------
-char * add_www(char * test)
+char * switch_order_domain(char * url, char * domain)
 {
-    char * result;
-    char * start = strstr(test,"//")+2;
-    char * second_dot = strchr(strchr(start,'.')+1,'.');
-    char * path = strchr(start,'/');
-    int need_www = ((second_dot - path > 0) || second_dot == NULL);
-    if(path == NULL)
-        path = strchr(start,'\0');
 
-    if( need_www )
+    //domain = google.com
+
+    // http:(//www.google.com) or http:(//google.com)
+    char * beginning = strstr(url, "//");
+    char * middle, * end, *path, * newurl, * testurl;
+
+    testurl = NULL;
+
+    if(beginning == NULL)
     {
-        result = (char *)malloc(path -start + 1);
-        memset(result, '\0',path -start + 1);
-        strncpy(result,test,start-test);
-        strcpy(&(result[start-test]),"www.");
-        strcpy(&(result[start-test+4]),start);
-        return result;
+        // if there isn't http(s):// for some reason
+        if(testurl != NULL)
+            free(testurl);
+        return NULL;
     }
     else
     {
-        return NULL;
+        // move past the double slash
+        beginning = &(beginning[2]);
     }
+
+    // google.com/asdasd.asdsd
+    middle = strstr(beginning,domain);
+    end = strchr(middle,'.')+1;
+
+    // for strange links like www.alumni.mcgill.ca with a useless (www.)
+    if( (strchr(beginning,'.')+1 != middle) && (strstr(beginning,"www") == beginning) )
+    {
+        beginning = strchr(beginning,'.')+1;         //(www.alumni.mcgill.ca) --> www.(alumni.mcgill.ca)
+    }
+
+
+    if( (strchr(strchr(beginning,'.')+1,'.') == NULL) || 
+        ((strchr(strchr(beginning,'.')+1,'.') > strchr(beginning,'/')) &&
+        (strchr(strchr(beginning,'.')+1,'.') != NULL) && (strchr(beginning,'/') != NULL)))
+    {
+        // we have a link with only one period
+        // add a www to the beginning of beginning
+        testurl = (char *)malloc(strlen("www.") + strlen(beginning) + 1);     
+        testurl[4 + strlen(beginning)] = '\0';
+
+        strcpy(testurl,"www.");
+        strcpy(&(testurl[4]),beginning);
+        testurl[4 /* "www." */ + strlen(beginning)] = '\0';
+        beginning = testurl;
+    }
+
+    int final_length = (int)(strlen(beginning)) +1;
+    newurl = (char*)malloc(final_length);
+
+    // at this point, 
+    // beginning = <anything>.mcgill.ca/asdadddasd..asdsadasd
+    // middle = mcgill.ca/asdadddasd..asdsadasd
+    // end = ca/asdadddasd..asdsadasd
+
+    int endl,begl,midl;
+
+    if(strchr(end,'/') != NULL)
+        endl = strchr(end,'/') - end;
+    else
+        endl = strchr(end,'\0') - end;
+
+    midl = end-middle-1;
+    begl = strstr(beginning,domain) - beginning - 1;
+
+    printf("newrl = %s\n", newurl);
+    strncpy(newurl,end,endl);
+    printf("newrl = %s\n", newurl);
+    newurl[endl] = '.';
+    printf("newrl = %s\n", newurl);
+    strncpy(&(newurl[endl+1]), middle,midl);
+    printf("newrl = %s\n", newurl);
+    newurl[midl+endl+1] = '.';
+    printf("newrl = %s\n", newurl);
+    strncpy(&(newurl[midl+endl+2]),beginning,begl);
+    printf("newrl = %s\n", newurl);
+    if(strchr(end,'/') != NULL)
+    {
+        newurl[midl+endl+begl + 2] = '/';
+        printf("newrl = %s\n", newurl);
+        strcpy(&(newurl[midl+endl+begl + 3]),strchr(end,'/')+1);
+        printf("newrl = %s\n", newurl);
+    }
+    else
+        newurl[midl+endl+begl + 2] = '\0';
+        printf("newrl = %s\n", newurl);
+    
+
+    if(testurl != NULL)
+        free(testurl);
+
+
+    return newurl;
 }
 
 int main()
 {
-    char * test;
-    test = add_www("http://google.com");
+    char * test = "http://www.alumni.mcgill.ca/asdadsd.asdasdas";
 
-    printf("test = \'%s\'\n", test);
-
-    free(test);
-
+    printf("result = %s\n", switch_order_domain(test,"mcgill.ca"));
     return 0;
 }
-
-
-
-// ------------can i get the domain like this?------------------------------------------
-
-// char * get_domain(char * link)
-// {
-//     char * to_copy = strchr(link,'.')+1;
-//     char * path = strchr(to_copy,'/');
-
-//     if(path == NULL)
-//     {
-//         path = strchr(to_copy,'\0');
-//     }
-
-//     int size = path - to_copy+1;
-//     char * domain = (char*)malloc(size);
-//     strncpy(domain,to_copy, size-1);
-//     domain[size-1] = '\0';
-
-//     return domain;
-// }
-
-// int main()
-// {
-//     char * link = "http://www.google.com";
-//     char * domain = get_domain(link);
-
-//     printf("domain = %s\n",domain );
-
-//     free(domain);
-
-//     return 0;
-// }
-
 
 
 // ------------------------------Does overallocing and then reallocing to the actual size fuck with data?----------------------
