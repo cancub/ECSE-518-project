@@ -46,6 +46,7 @@ void copy_linked_list(struct Linked_list * a, struct Linked_list * b)
 void add_node(struct Linked_list * a)
 {
     struct node * new_node = (struct node *)malloc(sizeof(struct node));
+    
     if(a->root != NULL)
     {
         new_node->prev = (a->root)->prev;

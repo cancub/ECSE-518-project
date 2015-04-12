@@ -107,8 +107,8 @@ int main (int argc, char *argv[]){
 
 	printf("Result = \n");
 	print_DubArray(&result);
-	// print_order(&result);
-	// printf("\n");
+	print_order(&result);
+	printf("\n");
 
 	printf("Time to converge = %5.3f s\n", (double)(msec/1000)+((double)(msec%1000))/1000 );
 	printf("Iterations to converge = %d\n", itercount);

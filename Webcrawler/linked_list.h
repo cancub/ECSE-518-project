@@ -17,7 +17,7 @@ struct node
     struct node *prev;
     char * hyperlink;
     char * filtered_hyperlink;
-    struct edge_ptr_array edges;
+    struct edge_ptr_array * edges;
 };
 
 struct Linked_list

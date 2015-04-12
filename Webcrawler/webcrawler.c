@@ -45,8 +45,7 @@ char * clean_link(char * url);
 int search_for_link(struct Linked_list * a, char * filtered_link);
 void print_string(char * string_thing);
 char * rm_invalid(char * url);
-void read_and_save(char * raw_links, struct node * node_under_wget, struct stringArray * links_to_crawl,
-    int should_append);
+void read_and_save(char * raw_links, struct node * node_under_wget, struct stringArray * links_to_crawl);
 int ** quick_search(struct stringArray * parsed_links, char * link);
 char * remove_slash(char ** link);
 // void print_links(struct stringArray * list);
@@ -56,16 +55,21 @@ void add_link_string(struct node * n, char * link);
 void remove_links_and_edges(struct Linked_list *a);
 void free_LL(struct Linked_list * a);
 struct node * add_sorted_link(struct Linked_list * parsed_links, char * str);
-void crawl(struct node * node_under_wget, struct stringArray * links_to_crawl, char * link, int should_append);
+void crawl(struct node * node_under_wget, struct stringArray * links_to_crawl, char * link);
+struct node * create_node(char * str, int index);
+void print_all_info(struct node * n);
+int string_to_int(char * test);
+
 
 int index_under_wget = 1;
 char raw_links[] = "raw_links.txt";
+int totallinks;
 
 int thread_test;
 
 int main(int argc, char *argv[])
 {
-    struct link_and_index * link = (struct link_and_index *)malloc(sizeof(struct link_and_index)); 
+    char * link;
     struct stringArray * links_to_crawl = (struct stringArray *)malloc(sizeof(struct stringArray));
     struct Linked_list * parsed_links = initialize_linked_list(0);
     char * filtered = "filtered_links.txt"; // where we will store the final, sorted list of links
@@ -81,104 +85,124 @@ int main(int argc, char *argv[])
         return(-1);
     }
 
-    FILE * filtered_file = fopen(filtered,"w");
-    if(filtered_file == NULL)
+    FILE * sorted_link_file = fopen(filtered,"w");
+    if(sorted_link_file == NULL)
     {
         printf("Could not open %s for writing\n", filtered);
         return(-1);
     }
-    printf("here\n");
 
     //find the link we will start the crawl with
-    if(argc == 2)
+    if(argc == 3)
     {
-        link->str = argv[1];
+        link = argv[1];
+        totallinks = string_to_int(argv[2]);
+    }
+    else if (argc == 2)
+    {
+        link = argv[1];
+        totallinks = 200;
     }
     else
     {
-        link->str = "http://www.google.com";
+        link = "http://www.google.com";
+        totallinks = 200;
     }
 
     links_to_crawl->size = 1;
-    links_to_crawl->array = (struct link_and_index *)malloc((int)(links_to_crawl->size) * sizeof(struct link_and_index));
-    links_to_crawl->array[0].str = link->str;
-
+    links_to_crawl->array = (struct link_and_index *)malloc(totallinks*sizeof(struct link_and_index));
+    links_to_crawl->array[0].str = (char*)malloc(strlen(link)+1);
+    strcpy(links_to_crawl->array[0].str, link);
 
     // crawl as many links as the value of STARTLINKS dictates and append all these links'
     // sublinks to the list of links that we will eventually crawl
     do
     {           
         // find the next link with it's string and index
-        link = &(links_to_crawl->array[index_under_wget-1]);
+        link = (links_to_crawl->array[index_under_wget-1]).str;
         printf("\n-----------------------\n\nRound %d of %d:\n", index_under_wget,(int)(links_to_crawl->size));
-        printf("looking at link %s\n",link->str); 
-        // find where it belongs, lexigraphicaly, in the linked list and return the pointer to that node
-        node_under_wget = add_sorted_link(parsed_links,link->str);
+        printf("looking at link %s\n",link); 
+        // find where it belongs, alphabetically, in the linked list and return the pointer to that node
+        node_under_wget = add_sorted_link(parsed_links,link);
         if(node_under_wget == NULL)
         {
             // somehow, after all our filtering, this link already exists in the parsed linked list
             exit(0);
         }
         // update the pointer in the links_to_crawl which points to the index of this node
-        link->index_ptr = &(node_under_wget->index);
+        (links_to_crawl->array[index_under_wget-1]).index_ptr = &(node_under_wget->index);
         // crawl this link for all the hyperlinks on its page
-        crawl(node_under_wget, links_to_crawl,link->str,APPEND);
+        crawl(node_under_wget, links_to_crawl,link);
         // printf("root after crawl = %s\n", parsed_links->root->filtered_hyperlink );
         // move to the next link
+        // print_all_info(node_under_wget);
         index_under_wget++;
-    }while(index_under_wget <= STARTLINKS);
+    }while(index_under_wget <= totallinks);
 
     // sleep(1);
     // printf("root between crawls = %s\n", parsed_links->root->filtered_hyperlink );
 
 
-    // after this initial number of links to crawl has been acheived, continue crawling
+    // after this initial limit of links to crawl has been reached, continue crawling
     // the links in the links_to_crawl list, but no longer append the links they point to
     // (this is the finishing up phase);
-    while(index_under_wget <= links_to_crawl->size)
-    {
-        // find the next link with it's string and index
-        link = &(links_to_crawl->array[index_under_wget-1]);
-        printf("\n-----------------------\n\nRound %d of %d:\n", index_under_wget,(int)(links_to_crawl->size));
-        printf("looking at link %s\n",link->str); 
-        // find where it belongs, lexigraphicaly, in the linked list and return the pointer to that node
-        node_under_wget = add_sorted_link(parsed_links,link->str);
-        if(node_under_wget == NULL)
-        {
-            // somehow, after all our filtering, this link already exists in the parsed linked list
-            exit(0);
-        }
-        // update the pointer in the links_to_crawl which points to the index of this node
-        link->index_ptr = &(node_under_wget->index);
-        // crawl this link for all the hyperlinks on its page
-        crawl(node_under_wget, links_to_crawl,link->str,NOAPPEND);
-        // move to the next link
-        index_under_wget++;
-    }
+    // while(index_under_wget <= links_to_crawl->size)
+    // {
+    //     // find the next link with it's string and index
+    //     link = (links_to_crawl->array[index_under_wget-1]).str;
+    //     printf("\n-----------------------\n\nRound %d of %d:\n", index_under_wget,(int)(links_to_crawl->size));
+    //     printf("looking at link %s\n",link); 
+    //     // find where it belongs, alphabetically, in the linked list and return the pointer to that node
+    //     node_under_wget = add_sorted_link(parsed_links,link);
+    //     if(node_under_wget == NULL)
+    //     {
+    //         // somehow, after all our filtering, this link already exists in the parsed linked list
+    //         exit(0);
+    //     }
+    //     // update the pointer in the links_to_crawl which points to the index of this node
+    //     (links_to_crawl->array[index_under_wget-1]).index_ptr = &(node_under_wget->index);
+    //     // crawl this link for all the hyperlinks on its page
+    //     crawl(node_under_wget, links_to_crawl,link,NOAPPEND);
+    //     // print_all_info(node_under_wget);
+    //     // move to the next link
+    //     index_under_wget++;
+    // }
 
     // print all the ordered links to file and, at the same time, print their edges to a seperate
     // file
     temp = parsed_links->root;
     do
     {
-        fprintf(filtered_file, "%s\n",temp->hyperlink);
-        for(i = 0; i < temp->edges.size; i++)
+        fprintf(sorted_link_file, "%s\n",temp->hyperlink);
+        printf("-------------------------------\nStarting to print\n");
+        // printf("size = %d\n",(int)(temp->edges->size) );
+        printf("link is %s\n",temp->filtered_hyperlink);
+        printf("size is %d\n",(int)(temp->edges->size) );
+        if(temp->edges->array != NULL)
         {
-            fprintf(ofp, "%d\t%d\n", temp->index,**(temp->edges.array[i]));
+            for(i = 0; i < temp->edges->size; i++)
+            {
+                printf("printing edge %d->%d\n", temp->index,**(temp->edges->array[i]));
+                fprintf(ofp, "%d\t%d\n", temp->index,**(temp->edges->array[i]));
+            }
         }
         to_next(&temp);
     }while(temp != parsed_links->root);
 
-    free(link);
+    // free(link->str);
+    // free(link);
+    for(i = 0; i < links_to_crawl->size; i++)
+    {
+        free((links_to_crawl->array[i]).str);
+    }
     free(links_to_crawl->array);
     free(links_to_crawl);
     free_LL(parsed_links);
 
-    fclose(filtered_file);
+    fclose(sorted_link_file);
     fclose(ofp);
 
-    /* we're done with libcurl, so clean it up */ 
-    curl_global_cleanup();
+  
 
     return 0;
 
@@ -194,8 +218,41 @@ int main(int argc, char *argv[])
 //
 //functions
 
+int string_to_int(char * test)
+{
+    int tens = 1;
+    int i = 0;
+    int result = 0;
 
-void crawl(struct node * node_under_wget, struct stringArray * links_to_crawl, char * link, int should_append)
+    while((test[i] != '\0') && (test[i] != '\n'))
+    {
+        i++;
+    }
+
+    for(i--;i >= 0; i--)
+    {
+        // printf("%c\n",test[i] );
+        result += (test[i] - '0') * tens;
+        tens *= 10;
+    }
+
+    return result;
+}
+
+void print_all_info(struct node * n)
+{
+    printf("index = %d\n",n->index );
+    printf("hyperlink = %s\n",n->hyperlink );
+    printf("filtered hyperlink = %s\n",n->filtered_hyperlink );
+    printf("edges = " );
+    int i;
+    for(i = 0; i < n->edges->size; i++)
+    {
+        printf("%p ", (void*)(*(n->edges->array[i])) );
+    }
+}
+
+void crawl(struct node * node_under_wget, struct stringArray * links_to_crawl, char * link)
 {
     pthread_t wget;
     int count, retry = 0;
@@ -251,18 +308,18 @@ void crawl(struct node * node_under_wget, struct stringArray * links_to_crawl, c
 
     // using the links we just found, the linked list of crawled links and the list of links we will
     // soon crawl, parse the liks
-    read_and_save(raw_links, node_under_wget,links_to_crawl, should_append);
+    read_and_save(raw_links, node_under_wget,links_to_crawl);
 
 }
 
-void read_and_save(char * raw_links, struct node * node_under_wget, struct stringArray * links_to_crawl,
-    int should_append)
+void read_and_save(char * raw_links, struct node * node_under_wget, struct stringArray * links_to_crawl)
 {
     // open the raw links file from wget
     FILE * ifp = fopen(raw_links,"r");
     char link[2500];
     char * newlink = NULL;
     int ** to_index_ptr;
+    struct link_and_index * str_ind;
     int i;
 
     if(ifp == NULL)
@@ -291,7 +348,7 @@ void read_and_save(char * raw_links, struct node * node_under_wget, struct strin
 
     // we can either refrain from adding links to crawl later or include them, based on the
     // value from the calling function. Edges will be added regardless
-    if(should_append == APPEND)
+    if(links_to_crawl->size < totallinks)
     {
         printf("Adding edges and appending links\n");
     }
@@ -328,7 +385,10 @@ void read_and_save(char * raw_links, struct node * node_under_wget, struct strin
             // determine if the links is redirected (for shortened urls)
             if((strstr(test_link,"//goo.gl") != NULL) || (strstr(test_link,"//tinyurl") != NULL) ||
                 (strstr(test_link,"//t.co") != NULL) || (strstr(test_link,"//x.co") != NULL)||
-                (strstr(test_link,"//is.gd") != NULL) || (strstr(test_link,"//bit.ly") != NULL))
+                (strstr(test_link,"//is.gd") != NULL) || (strstr(test_link,"//bit.ly") != NULL) ||
+                (strstr(test_link,"//flip.it") != NULL) || (strstr(test_link,"//youtu.be") != NULL) ||
+                (strstr(test_link,"//tr.im") != NULL) || (strstr(test_link,"//cli.gs") != NULL) ||
+                (strstr(test_link,"//sn.im") != NULL) || (strstr(test_link,"//hex.io") != NULL))
             {
                 printf("Testing for redirect: %s\n",test_link);
 
@@ -376,44 +436,75 @@ void read_and_save(char * raw_links, struct node * node_under_wget, struct strin
             {
                 // this is a new link that does not already exist in our list
 
-                if (should_append == APPEND)
+                if (links_to_crawl->size < totallinks)
                 {
                     // only add the link to the newly discovered node if we are in the initial stages of
                     // link apprehension
 
                     // make room for the new link
                     links_to_crawl->size += 1;
-                    links_to_crawl->array = (struct link_and_index *)realloc(links_to_crawl->array, 
-                        (int)(links_to_crawl->size)*sizeof(struct link_and_index));
+                    // links_to_crawl->array = (struct link_and_index *)realloc(links_to_crawl->array, 
+                    //     ((int)(links_to_crawl->size)+10)*sizeof(struct link_and_index));
 
-                    // if((links_to_crawl->array)[(int)(links_to_crawl->size)-1] == NULL)
+
+                    if(links_to_crawl->array == NULL)
+                    {
+                        printf("Error in allocating memory for link\n");
+                    }
+                    // else
                     // {
-                    //     printf("Error in allocating memory for link\n");
+                    //     printf("total links = %d\n",(int)(links_to_crawl->size) );
                     // }
 
                     // add the link and it's (NULL to begin with) pointer to the index to the end
                     // of the links_to_crawl
-                    (links_to_crawl->array)[(int)(links_to_crawl->size)-1].index_ptr = NULL;
-                    (links_to_crawl->array)[(int)(links_to_crawl->size)-1].str = (char*)malloc((int)(strlen(newlink))+1);
-                    strcpy((links_to_crawl->array)[(int)(links_to_crawl->size)-1].str, newlink);
+                    str_ind = &((links_to_crawl->array)[(int)(links_to_crawl->size)-1]);
+                    str_ind->index_ptr = NULL;
+                    str_ind->str = (char*)malloc((int)(strlen(newlink))+1);
+                    strcpy(str_ind->str, newlink);
 
-                    possible_array[elements] = &((links_to_crawl->array)[(int)(links_to_crawl->size)-1].index_ptr);
+                    possible_array[elements] = &(str_ind->index_ptr);
                     elements++;
                     added++;
+                    // for(i = 0; i < elements; i++)
+                    // {
+                    //     printf("%p ",(void*)(*(possible_array[i])) );
+                    // }
+                    // printf("\n");
                 }
             }
         }
 
+        // node_under_wget->edges = (struct edge_ptr_array *)malloc(sizeof(struct edge_ptr_array));
+        node_under_wget->edges->array = (int ***)realloc(node_under_wget->edges->array,sizeof(int**)*elements);
+        node_under_wget->edges->size = (size_t)elements;
 
-        node_under_wget->edges.array = possible_array;
-        node_under_wget->edges.size = elements;
-
+        // possible_array = (int***)realloc(possible_array,sizeof(int**)*elements);
+        if(elements > 0)
+        {
+            for(i = 0; i < elements; i++)
+            {
+                node_under_wget->edges->array[i] = possible_array[i];
+            //     printf("%p ",(void*)(*(possible_array[i])) );
+            }
+            // printf("\n");
+        }
+        else
+        {
+            // free(possible_array);
+            node_under_wget->edges->array = NULL;
+        }
+        
+        free(test_link);
         if(newlink)
             free(newlink);
+        free(possible_array);
     }
 
     if(added)
         printf("Number of links added = %d\n",added);
+
+
 
     fclose(ifp);
 }
@@ -474,6 +565,9 @@ char * redirected(char * original)
     {
         printf("cURL error.\n");
     }
+
+    /* we're done with libcurl, so clean it up */ 
+    curl_global_cleanup();
 
     return result;
 
@@ -667,8 +761,8 @@ char * switch_order(char * url)
         testurl = (char *)malloc(strlen("www.") + strlen(beginning) + 1);     
         testurl[4 + strlen(beginning)] = '\0';
 
-        strcat(testurl,"www.");
-        strcat(&(testurl[4]),beginning);
+        strcpy(testurl,"www.");
+        strcpy(&(testurl[4]),beginning);
         testurl[4 /* "www." */ + strlen(beginning)] = '\0';
         beginning = testurl;
     }
@@ -882,6 +976,7 @@ int first_after_second(char * a, char * b)
         }
         else
         {
+            // try again with the next letter
             return first_after_second(&(a[1]),&(b[1]));
         }
     }
@@ -890,7 +985,7 @@ int first_after_second(char * a, char * b)
 void add_link_string(struct node * n, char * link)
 {
     n->hyperlink = (char*)malloc(strlen(link)+1);
-    strcpy(n->hyperlink, link);
+    strcpy(n->hyperlink, link); 
     n->filtered_hyperlink = switch_order(link);
 }
 
@@ -902,8 +997,10 @@ void remove_links_and_edges(struct Linked_list *a)
     {
         free(temp->hyperlink);
         free(temp->filtered_hyperlink);
-        if((int)(temp->edges.size) > 0)
-            free(temp->edges.array);
+        if(temp->edges->array != NULL)
+            // printf("index = %d\n",temp->index );
+            free(temp->edges->array);
+        free(temp->edges);
         to_next(&temp);
     } while (temp != a->root);
 }
@@ -913,6 +1010,16 @@ void free_LL(struct Linked_list * a)
     remove_links_and_edges(a);
     delete_linked_list(a);
     free(a);
+}
+
+struct node * create_node(char * str, int index)
+{
+    struct node * new_node = (struct node*)calloc(1,sizeof(struct node));   // this will hold all the link's node info
+    add_link_string(new_node,str);
+    new_node->index = index; 
+    new_node->edges = (struct edge_ptr_array*)calloc(1,sizeof(struct edge_ptr_array));
+    new_node->edges->array = (int***)calloc(1,sizeof(int**));
+    return new_node;
 }
 
 struct node * add_sorted_link(struct Linked_list * parsed_links, char * str)
@@ -925,31 +1032,26 @@ struct node * add_sorted_link(struct Linked_list * parsed_links, char * str)
         //this is the first link that we are inputing into
         // the linked list so we don't need to care about anything really
         // just put it at the front and don't worry about sorting
-        add_node(parsed_links);
-        parsed_links->root->index = 1;
-        add_link_string(parsed_links->root,str);
-        return parsed_links->root;
+        struct node * new_node = create_node(str,1);
+        new_node->next = new_node;
+        new_node->prev = new_node;
+        parsed_links->root = new_node;
+        return new_node;
     }
     else
     {
-        struct node * new_node = (struct node*)malloc(sizeof(struct node));   // this will hold all the link's node info
-        struct node * temp = parsed_links->root; // to loop through the list
-        add_link_string(new_node,str);
         int test;
+        struct node * temp = parsed_links->root; // to loop through the list
+        char * test_string = switch_order(str);
         // there are other nodes in the list, so we seek out this link's place in the list
         do
         {   
-            test = first_after_second(temp->filtered_hyperlink,new_node->filtered_hyperlink);
+            test = first_after_second(temp->filtered_hyperlink,test_string);
             if(test == 1)
             {   
-                //we've determined that the str, lexigraphically, comes before temp.
-                // thus we insert it before temp
-                new_node->index = temp->index;
-                if(new_node->index == 1)
-                {
-                    // must move the root if this is the first link
-                    parsed_links->root = new_node;
-                }
+                //we've determined that the str, alphabetically, comes before temp.
+                // thus we insert it before temp'
+                struct node * new_node = create_node(str,temp->index) ;
 
                 // push the node to the proper location (just before the last node we tested)
                 insert_node_before(temp,new_node);
@@ -967,6 +1069,8 @@ struct node * add_sorted_link(struct Linked_list * parsed_links, char * str)
                     to_next(&temp);
                 } while (temp != parsed_links->root);
 
+                // printf("%s\n", );
+                free(test_string);
                 //we're done
                 return new_node;
             }
@@ -974,16 +1078,9 @@ struct node * add_sorted_link(struct Linked_list * parsed_links, char * str)
             {
                 // the links appear to be the same, but it might just be the filtered hyperlinks,
                 // implying that one is https and the other http
-                if(strstr(temp->hyperlink,"https")!= NULL && strstr(new_node->hyperlink,"https") == NULL)
+                if(strstr(temp->hyperlink,"https")!= NULL && strstr(str,"https") == NULL)
                 {
-                    //we've determined that the str, lexigraphically, comes before temp.
-                    // thus we insert it before temp
-                    new_node->index = temp->index;
-                    if(new_node->index == 1)
-                    {
-                        // must move the root if this is the first link
-                        parsed_links->root = new_node;
-                    }
+                    struct node * new_node = create_node(str,temp->index);                   
 
                     // push the node to the proper location (just before the last node we tested)
                     insert_node_before(temp,new_node);
@@ -1001,14 +1098,15 @@ struct node * add_sorted_link(struct Linked_list * parsed_links, char * str)
                         to_next(&temp);
                     } while (temp != parsed_links->root);
 
+                    free(test_string);
                     //we're done
                     return new_node;
                 } 
-                else if (strstr(temp->hyperlink,"https") == NULL && strstr(new_node->hyperlink,"https") != NULL)
+                else if (strstr(temp->hyperlink,"https") == NULL && strstr(str,"https") != NULL)
                 {
                     // it's the opposite, with the new link being the secure link and thus coming after the
                     // link already in the list
-                    new_node->index = temp->index + 1;
+                    struct node * new_node = create_node(str,temp->index +1);  
 
                     // push the node to the proper location (just after the last node we tested)
                     insert_node_after(temp,new_node);
@@ -1022,6 +1120,7 @@ struct node * add_sorted_link(struct Linked_list * parsed_links, char * str)
                         to_next(&temp);
                     }
 
+                    free(test_string);
                     //we're done
                     return new_node;
                 } 
@@ -1030,14 +1129,14 @@ struct node * add_sorted_link(struct Linked_list * parsed_links, char * str)
                     // we should not have made it this far if the link already exists in the list
                     // therefor there has been an error in a previous function
                     printf("----------------------------\n");
-                    printf("Error: repeated link %s from %s\n",new_node->filtered_hyperlink, new_node->hyperlink);
+                    printf("Error: repeated link %s from %s\n",test_string, str);
                     printf("is the same as %d: %s from %s\n",(int)(temp->index),temp->filtered_hyperlink, 
                         temp->hyperlink);
                     printf("input link is \"%s\"\n",str );
                     printf("---------------------------\n");
-                    free(new_node->hyperlink);
-                    free(new_node->filtered_hyperlink);
-                    free(new_node);
+                    free(test_string);
+                    // free(new_node->filtered_hyperlink);
+                    // free(new_node);
                     return NULL;
                     // exit(0);
                 }
@@ -1052,13 +1151,18 @@ struct node * add_sorted_link(struct Linked_list * parsed_links, char * str)
 
         if(temp == parsed_links->root)
         {
-            // we've made it to the point where we know that this new link is higher, lexigraphically, than all the other links
+            // we've made it to the point where we know that this new link is higher, alphabetically, than all the other links
             // so we add it to the end
-            new_node->index = parsed_links->root->prev->index + 1;
-            append_node(parsed_links,new_node);
+            struct node * new_node = create_node(str,parsed_links->root->prev->index + 1);  
+            insert_node_before(parsed_links->root,new_node);
+            parsed_links->size += 1;
+
+            free(test_string);
             return new_node;
         }
     }
+    printf("WHY THE FUCK ARE WE HERE\n");
+    exit(0);
 
     return NULL;
 }
