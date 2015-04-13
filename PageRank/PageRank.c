@@ -53,7 +53,13 @@ int main (int argc, char *argv[]){
 	}
 	else if (argc == 2)
 	{
-		filename = argv[1];
+		if(strlen(argv[1]) == 1)
+		{
+			adaptive = argv[1][0] - '0';
+			filename = "/home/al/Documents/C/ECSE-518-project/output.txt";
+		}
+		else
+			filename = argv[1];
 	}
 	else
 	{
@@ -87,10 +93,12 @@ int main (int argc, char *argv[]){
 	clock_t start = clock(), diff;
 	if(adaptive)
 	{
+		printf("Using adaptive PageRank on graph in %s\n", filename);
 		result = get_AdaptivePageRank(&temp_array, &x_0, &start_v, &itercount, epsilon);
 	}
 	else
-	{
+	{	
+		printf("Using pure PageRank on graph in %s\n", filename);
 		result = get_PageRank(&temp_array, &x_0, &start_v, &itercount, epsilon);
 	}
 	diff = clock() - start;
@@ -105,9 +113,9 @@ int main (int argc, char *argv[]){
 		return 0;
 	}
 
-	printf("Result = \n");
-	print_DubArray(&result);
-	print_order(&result);
+	// printf("Result = \n");
+	// print_DubArray(&result);
+	// print_order(&result);
 	printf("\n");
 
 	printf("Time to converge = %5.3f s\n", (double)(msec/1000)+((double)(msec%1000))/1000 );
@@ -228,7 +236,6 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 
 	}while(delta > epsilon);
 
-	// printf("here\n");
 
 	if (delta > epsilon)
 	{
@@ -326,7 +333,7 @@ struct DubArray get_AdaptivePageRank(struct TwoDArray * G, struct DubArray * x_b
 
 			if (converged_count == v_size)
 			{
-				printf("here\n");
+				// printf("here\n");
 				// print_DubArray(&x_after);
 				break;
 			}
@@ -429,7 +436,7 @@ void print_order(struct DubArray * a)
 		}		
 
 		printed[k] = max_index;
-		printf("%d\n",max_index+1);
+		// printf("%d\n",max_index+1);
 		fprintf(ofp, "%d\n",max_index+1 );
 
 		maxval = 0;
@@ -439,7 +446,7 @@ void print_order(struct DubArray * a)
 
 	fclose(ofp);
 
-	printf("\n");
+	// printf("\n");
 
 }
 

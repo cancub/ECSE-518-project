@@ -27,8 +27,8 @@ int string_to_int(char * test)
 
 int main()
 {
-	char * result = "ranks.txt";
-	char * links = "filtered_links.txt";
+	char * result = "/home/al/Documents/C/ECSE-518-project/PageRank/ranks.txt";
+	char * links = "/home/al/Documents/C/ECSE-518-project/Webcrawler/filtered_links.txt";
 	char * ranked_links = "ranked_links.txt";
 	char link[BUFFLEN];
 	char indexstring[10];

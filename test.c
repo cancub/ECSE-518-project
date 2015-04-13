@@ -7,111 +7,203 @@
 #include "linked_list.h"
 // #include <cblas.h>
 
-char * switch_order_domain(char * url, char * domain)
+// ---------------
+void append_edges(struct node * node_under_wget,int *** possible_array, int * elements)
 {
-
-    //domain = google.com
-
-    // http:(//www.google.com) or http:(//google.com)
-    char * beginning = strstr(url, "//");
-    char * middle, * end, *path, * newurl, * testurl;
-
-    testurl = NULL;
-
-    if(beginning == NULL)
-    {
-        // if there isn't http(s):// for some reason
-        if(testurl != NULL)
-            free(testurl);
-        return NULL;
-    }
-    else
-    {
-        // move past the double slash
-        beginning = &(beginning[2]);
-    }
-
-    // google.com/asdasd.asdsd
-    middle = strstr(beginning,domain);
-    end = strchr(middle,'.')+1;
-
-    // for strange links like www.alumni.mcgill.ca with a useless (www.)
-    if( (strchr(beginning,'.')+1 != middle) && (strstr(beginning,"www") == beginning) )
-    {
-        beginning = strchr(beginning,'.')+1;         //(www.alumni.mcgill.ca) --> www.(alumni.mcgill.ca)
-    }
-
-
-    if( (strchr(strchr(beginning,'.')+1,'.') == NULL) || 
-        ((strchr(strchr(beginning,'.')+1,'.') > strchr(beginning,'/')) &&
-        (strchr(strchr(beginning,'.')+1,'.') != NULL) && (strchr(beginning,'/') != NULL)))
-    {
-        // we have a link with only one period
-        // add a www to the beginning of beginning
-        testurl = (char *)malloc(strlen("www.") + strlen(beginning) + 1);     
-        testurl[4 + strlen(beginning)] = '\0';
-
-        strcpy(testurl,"www.");
-        strcpy(&(testurl[4]),beginning);
-        testurl[4 /* "www." */ + strlen(beginning)] = '\0';
-        beginning = testurl;
-    }
-
-    int final_length = (int)(strlen(beginning)) +1;
-    newurl = (char*)malloc(final_length);
-
-    // at this point, 
-    // beginning = <anything>.mcgill.ca/asdadddasd..asdsadasd
-    // middle = mcgill.ca/asdadddasd..asdsadasd
-    // end = ca/asdadddasd..asdsadasd
-
-    int endl,begl,midl;
-
-    if(strchr(end,'/') != NULL)
-        endl = strchr(end,'/') - end;
-    else
-        endl = strchr(end,'\0') - end;
-
-    midl = end-middle-1;
-    begl = strstr(beginning,domain) - beginning - 1;
-
-    printf("newrl = %s\n", newurl);
-    strncpy(newurl,end,endl);
-    printf("newrl = %s\n", newurl);
-    newurl[endl] = '.';
-    printf("newrl = %s\n", newurl);
-    strncpy(&(newurl[endl+1]), middle,midl);
-    printf("newrl = %s\n", newurl);
-    newurl[midl+endl+1] = '.';
-    printf("newrl = %s\n", newurl);
-    strncpy(&(newurl[midl+endl+2]),beginning,begl);
-    printf("newrl = %s\n", newurl);
-    if(strchr(end,'/') != NULL)
-    {
-        newurl[midl+endl+begl + 2] = '/';
-        printf("newrl = %s\n", newurl);
-        strcpy(&(newurl[midl+endl+begl + 3]),strchr(end,'/')+1);
-        printf("newrl = %s\n", newurl);
-    }
-    else
-        newurl[midl+endl+begl + 2] = '\0';
-        printf("newrl = %s\n", newurl);
+    int i,j;
     
-
-    if(testurl != NULL)
-        free(testurl);
-
-
-    return newurl;
+    for(i = 0; i < *elements; i++)
+    {
+        for(j = 0; j<node_under_wget->edges->size; j++)
+        {
+            if(node_under_wget->edges->array[j] == possible_array[i])
+                break;  
+        }
+        if(j != node_under_wget->edges->size)
+        {
+            node_under_wget->edges->size += 1;
+            node_under_wget->edges->array = (int ***)realloc(node_under_wget->edges->array,
+                (int)(node_under_wget->edges->size));
+            node_under_wget->edges->array[node_under_wget->edges->size-1] = possible_array[i];
+        }  
+        else
+        {
+            *(elements) -= 1
+        } 
+    }
 }
 
 int main()
 {
-    char * test = "http://www.alumni.mcgill.ca/asdadsd.asdasdas";
+    
 
-    printf("result = %s\n", switch_order_domain(test,"mcgill.ca"));
-    return 0;
 }
+
+// --------------------want to check the host against the current host ---------------------
+
+// char * host_check(char * host, char * filtered_hyperlink)
+// {
+//     //host = "cs", filtered_hyperlink = "ca.mcgill.caa.bc/asdadasd.aasd"
+
+//     // caa.bc/asdadasd.aasd
+//     char * soft_host = strchr(strchr(filtered_hyperlink,'.')+1,'.')+1;
+
+//     int host_size;
+
+//     if(strchr(soft_host,'/') != NULL)
+//         host_size = strchr(soft_host,'/')-soft_host+1;
+//     else
+//         host_size = strchr(soft_host,'\0')-soft_host+1;
+
+//     char * test_host = (char*)malloc(host_size+1);
+//         printf("host_size = %d\n",host_size);
+//     memset(test_host,'\0', host_size+1);
+//     strncpy(test_host,soft_host,host_size-1);
+
+//     if(strcmp(host,test_host) != 0)
+//     {
+//         return test_host;
+//     }
+//     else
+//     {
+//         free(test_host);
+//         return NULL;
+//     }
+// }
+
+// int main()
+// {
+//     char * host = "";
+//     char * test = "ca.mcgill.cs.sa/sdasdads";
+//     if (host_check(host,test) == NULL)
+//         printf("pp\n" );
+//     else
+//         printf("%s\n", host_check(host,test));
+
+//     return 0;    
+// }
+
+//--------------------------------------working with switching order, but with reference to a domain---
+
+// char * switch_order(char * url);
+
+// char * switch_order_domain(char * url, char * domain)
+// {
+
+//     //domain = google.com
+
+//     // http:(//www.google.com) or http:(//google.com)
+//     char * beginning = strstr(url, "//");
+//     char * middle, * end, *path, * newurl, * testurl;
+
+//     testurl = NULL;
+
+//     if(beginning == NULL)
+//     {
+//         // if there isn't http(s):// for some reason
+//         if(testurl != NULL)
+//             free(testurl);
+//         return NULL;
+//     }
+//     else
+//     {
+//         // move past the double slash
+//         beginning = &(beginning[2]);
+//     }
+
+//     // google.com/asdasd.asdsd
+//     middle = strstr(beginning,domain);
+//     end = strchr(middle,'.')+1;
+
+//     // for strange links like www.alumni.mcgill.ca with a useless (www.)
+//     if( (strchr(beginning,'.')+1 != middle) && (strstr(beginning,"www") == beginning) )
+//     {
+//         beginning = strchr(beginning,'.')+1;         //(www.alumni.mcgill.ca) --> www.(alumni.mcgill.ca)
+//     }
+
+
+//     if( (strchr(strchr(beginning,'.')+1,'.') == NULL) || 
+//         ((strchr(strchr(beginning,'.')+1,'.') > strchr(beginning,'/')) &&
+//         (strchr(strchr(beginning,'.')+1,'.') != NULL) && (strchr(beginning,'/') != NULL)))
+//     {
+//         // we have a link with only one period
+//         // add a www to the beginning of beginning
+//         testurl = (char *)malloc(strlen("www.") + strlen(beginning) + 1);     
+//         testurl[4 + strlen(beginning)] = '\0';
+
+//         strcpy(testurl,"www.");
+//         strcpy(&(testurl[4]),beginning);
+//         testurl[4 /* "www." */ + strlen(beginning)] = '\0';
+//         beginning = testurl;
+//     }
+
+//     int final_length = (int)(strlen(beginning)) +1;
+//     newurl = (char*)malloc(final_length);
+
+//     // at this point, 
+//     // beginning = <anything>.mcgill.ca/asdadddasd..asdsadasd
+//     // middle = mcgill.ca/asdadddasd..asdsadasd
+//     // end = ca/asdadddasd..asdsadasd
+
+//     int endl,begl,midl;
+
+//     if(strchr(end,'/') != NULL)
+//         endl = strchr(end,'/') - end;
+//     else
+//         endl = strchr(end,'\0') - end;
+
+//     midl = end-middle-1;
+//     begl = strstr(beginning,domain) - beginning - 1;
+
+//     strncpy(newurl,end,endl);
+//     newurl[endl] = '.';
+//     strncpy(&(newurl[endl+1]), middle,midl);
+//     newurl[midl+endl+1] = '.';
+//     strncpy(&(newurl[midl+endl+2]),beginning,begl);
+//     if(strchr(end,'/') != NULL)
+//     {
+//         newurl[midl+endl+begl + 2] = '/';
+//         strcpy(&(newurl[midl+endl+begl + 3]),strchr(end,'/')+1);
+//     }
+//     else
+//         newurl[midl+endl+begl + 2] = '\0';
+    
+
+//     if(testurl != NULL)
+//         free(testurl);
+
+
+//     return newurl;
+// }
+
+// char * flipper(char * test)
+// {
+//     char *second;
+
+//     char * flipped = switch_order_domain(test,"mcgill.ca");
+
+//     second = switch_order(flipped);
+
+//     free(flipped);
+//     int size = strstr(test,"//") + 2 - test + strlen(second)+1;
+
+//     printf("size= %d\n",size );
+//     flipped = (char*)malloc(size);
+//     memset(flipped,'\0',size);
+
+//     strncpy(flipped,test,strstr(test,"//") + 2 - test);
+//     strcpy(&(flipped[strstr(test,"//") + 2 - test]),second);
+
+//     return flipped;
+// }
+
+// int main()
+// {
+//     char * test = "http://mcgill.ca/asdadsd.asdasdas";
+    
+//     printf("result = %s\n", flipper(test));
+//     return 0;
+// }
 
 
 // ------------------------------Does overallocing and then reallocing to the actual size fuck with data?----------------------
@@ -145,6 +237,7 @@ int main()
 // char * switch_order(char * url)
 // {
 
+//     printf("url = %s\n",  url);
 //     char ** pieces = (char **)malloc(sizeof(char *)*3);
 //     char * stops = (char *)malloc(sizeof(char)*3);
 
@@ -154,19 +247,24 @@ int main()
 
 //     testurl = NULL;
 
+//     int shortlink = 0;
+
 //     if(beginning == NULL)
 //     {
 //         // if there isn't http(s):// for some reason
-//         free(pieces);
-//         free(stops);
-//         if(testurl != NULL)
-//             free(testurl);
-//         return NULL;
+//         // free(pieces);
+//         // free(stops);
+//         // if(testurl != NULL)
+//         //     free(testurl);
+//         // return NULL;
+//         shortlink = 1;
+//         beginning = url;
 //     }
 //     else
 //     {
 //         beginning = &(beginning[2]);
 //     }
+
 
 //     // printf("%s %s %s\n",beginning,(strchr(strchr(beginning,'.')+1,'.')),strchr(beginning,'/'));
 
@@ -276,6 +374,7 @@ int main()
 
 
 //     newurl = (char *)malloc(final_length);
+//     memset(newurl,'\0',final_length);
 
 //     // set up both the pieces of the url we will look at and the characters that we will look for
 //     // in order to shift to the next pointer
@@ -283,11 +382,11 @@ int main()
 //     pieces[1] = middle;         //(google.com)
 //     pieces[2] = beginning;      //(www.)
 
-//     // printf("\n%s\n",end );
-//     // printf("%s\n", middle);
-//     // printf("%s\n\n",beginning );
-//     //     sleep(1);
-//     // }
+//     printf("\n%s\n",end );
+//     printf("%s\n", middle);
+//     printf("%s\n\n",beginning );
+//     // sleep(1);
+    
 
 
 
@@ -331,8 +430,16 @@ int main()
 //     if(stops[0] == '/')
 //     {
 //         // http://(www.google.com(/jasdkadksa)) or http://(google.com/(asdsadas))
-//         path = strstr(url, "//") + 2;
-//         path = strchr(path,'/');
+
+//         if(shortlink)
+//         {
+//             path = strchr(url,'/');            
+//         }
+//         else
+//         {
+//             path = strstr(url, "//") + 2;
+//             path = strchr(path,'/');
+//         }
 
 
 //         i = 0;
@@ -345,6 +452,7 @@ int main()
 //             newurl[url_count++] = path[i++];
 //         }while(path[i] != '\0');
 //     } 
+//     printf("here\n");
 
 //     // copy the terminator
 //     newurl[url_count] = '\0';
