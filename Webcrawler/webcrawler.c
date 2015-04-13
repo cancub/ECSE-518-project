@@ -136,42 +136,59 @@ int main(int argc, char *argv[])
     {           
         // find the next link with it's string and index as long as this link does not exist at the
         // maximum depth level
-        if ((links_to_crawl->array[index_under_wget-1]).depth <= maxdepth)
-        {
-            link = (links_to_crawl->array[index_under_wget-1]).str;
-            // if(strstr())
+        
+        link = (links_to_crawl->array[index_under_wget-1]).str;
+        // if(strstr())
 
-            printf("\n-----------------------\n\nCrawl %d of %d:\n", index_under_wget,(int)(links_to_crawl->size));
-            
-            // find where it belongs, alphabetically, in the linked list and return the pointer to that node
-            
-            node_under_wget = add_sorted_link(parsed_links,link,domain);
-            printf("looking at link %s\n",node_under_wget->hyperlink); 
-            printf("depth = %d\n", (links_to_crawl->array[index_under_wget-1]).depth);
-            // print_links(parsed_links);
-            if(node_under_wget == NULL)
-            {
-                // somehow, after all our filtering, this link already exists in the parsed linked list
-                index_under_wget++;
-                printf("Hyperlink already exists in some form in the link %s\n",
-                    node_under_wget->hyperlink );
-                continue;
-                // exit(0);
-            }
-            printf("filtered_hyperlink is %s\n", node_under_wget->filtered_hyperlink);
-            node_under_wget->depth = (links_to_crawl->array[index_under_wget-1]).depth;
-            
-            // update the pointer in the links_to_crawl which points to the index of this node
-            (links_to_crawl->array[index_under_wget-1]).index_ptr = &(node_under_wget->index);
-            // crawl this link for all the hyperlinks on its page
-            printf("Beginning wget\n");
-            wget_wrapper(node_under_wget->hyperlink);
-            printf("Parsing links from wget\n");
-            read_and_save(raw_links, node_under_wget,links_to_crawl, domain,0);
-            // move to the next link
-            // print_all_info(node_under_wget);
-            printf("Crawl complete\n");
+        printf("\n-----------------------\n\nCrawl %d of %d:\n", index_under_wget,
+            (int)(links_to_crawl->size));
+
+        printf("looking at link %s\n",link); 
+
+        if(strstr(link,"www/") != NULL)
+        {   
+            index_under_wget++;
+            printf("Hyperlink %s is invalidm\n",link);
+            // (links_to_crawl->array[index_under_wget-1]).index_ptr = (int*)malloc(sizeof(int));
+            (links_to_crawl->array[index_under_wget-1]).index_ptr = NULL;
+            printf("using null index\n");
+            continue;
+            // exit(0); 
         }
+        
+        // find where it belongs, alphabetically, in the linked list and return the pointer to that node
+        // if ((links_to_crawl->array[index_under_wget-1]).depth < maxdepth)
+        // {
+        node_under_wget = add_sorted_link(parsed_links,link,domain);
+        if(node_under_wget == NULL)
+        {
+            // somehow, after all our filtering, this link already exists in the parsed linked list
+            index_under_wget++;
+            printf("Hyperlink %s already exists in some form\n",link);
+            // (links_to_crawl->array[index_under_wget-1]).index_ptr = (int*)malloc(sizeof(int));
+            (links_to_crawl->array[index_under_wget-1]).index_ptr = NULL;
+            printf("using null index\n");
+            continue;
+            // exit(0);
+        }
+        // }
+        node_under_wget->depth = (links_to_crawl->array[index_under_wget-1]).depth;
+        printf("depth = %d\n", node_under_wget->depth);
+        // print_links(parsed_links);
+        
+        printf("filtered_hyperlink is %s\n", node_under_wget->filtered_hyperlink);
+        
+        // update the pointer in the links_to_crawl which points to the index of this node
+        (links_to_crawl->array[index_under_wget-1]).index_ptr = &(node_under_wget->index);
+        // crawl this link for all the hyperlinks on its page
+        printf("Beginning wget\n");
+        wget_wrapper(node_under_wget->hyperlink);
+        printf("Parsing links from wget\n");
+        read_and_save(raw_links, node_under_wget,links_to_crawl, domain,0);
+        // move to the next link
+        // print_all_info(node_under_wget);
+        printf("Crawl complete\n");
+        
         index_under_wget++;
 
     }while(index_under_wget-1 < (int)(links_to_crawl->size));
@@ -182,11 +199,12 @@ int main(int argc, char *argv[])
     temp = parsed_links->root;
     char * host = host_check("",temp->filtered_hyperlink);
     char * temp_host = NULL;
+    int printed = 0;
     // print_links(parsed_links);
 
     do
     {
-        
+        printed = 0;
         if (temp_host != NULL)
         {
             free(temp_host);
@@ -200,25 +218,41 @@ int main(int argc, char *argv[])
         if(temp_host != NULL)
         {
             // there has been a change in hosts, so we are at the next block
-            fprintf(ofp, "X\tX\n");
+            fprintf(ofp, "-1\t-1\n");
             printf("--------------------\ntemp_host = %s, old host = %s\n",temp_host,host);
-            fprintf(sorted_link_file, "-------------------\n");
+            // fprintf(sorted_link_file, "-------------------\n");
             free(host);
             host = "";
             host = host_check(host,temp->filtered_hyperlink);
         }
         
         fprintf(sorted_link_file, "%s\n",temp->filtered_hyperlink);
-        
+
         if(temp->edges->array != NULL)
         {
 
             for(i = 0; i < temp->edges->size; i++)
-            {
-
-                printf("printing edge %d->%d\n", temp->index,**(temp->edges->array[i]));
-                fprintf(ofp, "%d\t%d\n", temp->index,**(temp->edges->array[i]));
+            {   
+                // if    NULL
+                // edge-->ptr-->index
+                if(*(temp->edges->array[i]) != NULL)
+                {
+                    printf("printing edge %d->%d\n", temp->index,**(temp->edges->array[i]));
+                    fprintf(ofp, "%d\t%d\n", temp->index,**(temp->edges->array[i]));
+                    printed = 1;
+                }
             }
+            if(printed == 0)
+            {
+                printf("printing token edge %d->0\n", temp->index);
+                fprintf(ofp, "%d\t0\n", temp->index);
+            }
+        }
+        else
+        {
+            // this way we know where the last and first links in a block are
+            printf("printing token edge %d->0\n", temp->index);
+            fprintf(ofp, "%d\t0\n", temp->index);
         }
         to_next(&temp);
     }while(temp != parsed_links->root);
@@ -444,7 +478,7 @@ void read_and_save(char * raw_links, struct node * node_under_wget, struct strin
 
     // we can either refrain from adding links to crawl later or include them, based on the
     // value from the calling function. Edges will be added regardless
-    if(links_to_crawl->size < totallinks)
+    if(node_under_wget->depth < maxdepth)
     {
         printf("Adding edges and appending links\n");
     }
@@ -472,7 +506,9 @@ void read_and_save(char * raw_links, struct node * node_under_wget, struct strin
         while(fgets(link,2500,ifp) != NULL)
         {
             // while there are lines left in the file to parse, keep parsing
-            if((strstr(link,"//") != NULL) && (strstr(link,domain) != NULL))
+            // only take links that have the domain in a reasonable location
+            if((strstr(link,"//") != NULL) && (strstr(link,domain) != NULL) &&
+                (strstr(link,domain) - link < 12))
             {
 
                 for(i = 0; ((link[i] != '\0') && (&(link[i]) 
@@ -525,6 +561,11 @@ void read_and_save(char * raw_links, struct node * node_under_wget, struct strin
                 if(test_link != NULL)
                 {
                     free(newlink);
+                    if(strstr(test_link,"www/") != NULL)
+                    {
+                        printf("test_link = %s\n",test_link);
+                        test_link[strstr(test_link,"www/")+3-test_link-1] = '.';
+                    }
                     newlink = test_link;
                     test_link = NULL;
                     printf("newlink = %s\n",newlink );
@@ -560,7 +601,7 @@ void read_and_save(char * raw_links, struct node * node_under_wget, struct strin
                 else
                 {
                     // this is a new link that does not already exist in our list
-                    if (links_to_crawl->size < totallinks)
+                    if (links_to_crawl->size < totallinks && node_under_wget->depth < maxdepth)
                     {
                         // printf("adding link %s\n",newlink);
                         // only add the link to the newly discovered node if we are in the initial stages of

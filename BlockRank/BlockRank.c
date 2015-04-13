@@ -7,6 +7,7 @@
 #include "dubarrays.h"
 #include "twodarrays.h"
 #include "dubvmalg.h"
+#include <pthread.h>
 
 #define PERIODAD	7
 #define PERIODDEL	100
@@ -17,11 +18,33 @@
 // 	size_t size;
 // };
 
+struct arg_struct
+{
+	struct TwoDArray * graph;
+	struct DubArray * x_before;
+	struct DubArray * v;
+	int * iter;
+	int blockranking;
+};
+
+struct block
+{
+	int first;
+	int last;
+	int full;	
+};
+
+struct blockends
+{
+	int size;
+	struct block * array;
+};
+
 
 struct DubArray initialize_graph(struct TwoDArray * a, struct DubArray * no_out);
-struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_0, struct DubArray * v, int * iter, double epsilon);
-struct DubArray get_AdaptivePageRank(struct TwoDArray * G, struct DubArray * x_before, struct DubArray * v, int * iter, double epsilon);
-void obtain_graph_VE(char * filename, struct TwoDArray * a);
+struct DubArray get_PageRank(void * arguments);
+struct DubArray get_AdaptivePageRank(void * arguments);
+void obtain_graph_VE(char * filename, struct TwoDArray * a, struct blockends * blocks );
 void print_order(struct DubArray * result);
 void mtranspose(struct DubArray * A, int n);
 
@@ -35,6 +58,9 @@ int main (int argc, char *argv[]){
 	char * filename;
 	struct TwoDArray temp_array;
 	struct DubArray x_0, start_v, result;
+	struct blockends * blocks = (struct blockends*)malloc(sizeof(struct blockends));
+	blocks->size = 0;
+	blocks->array = NULL;
 	// char filenum;
 	// char * x_type = (char*)malloc(sizeof(char));
 	double x_vals,fraction;
@@ -69,7 +95,7 @@ int main (int argc, char *argv[]){
 	// scanf("%s", x_type);
 	// x_type = "e";
 
-	obtain_graph_VE(filename,&temp_array);
+	obtain_graph_VE(filename,&temp_array, blocks);
 
 	// print_2DArray(&temp_array);
 	// sleep(1);
@@ -87,7 +113,7 @@ int main (int argc, char *argv[]){
 
 	// free(x_type);
 
-	start_v = initialize_vector((int)(temp_array.size), fraction );
+	
 	x_0 = initialize_vector((int)(temp_array.size), x_vals);
 
 	clock_t start = clock(), diff;
@@ -152,8 +178,30 @@ int main (int argc, char *argv[]){
 
 
 
-struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, struct DubArray * v, int * iter, double epsilon)
+struct DubArray get_PageRank(void * arguments)
 {	
+	//the structure of the arguments has changed
+	// v
+	struct arg_struct * args = (struct arg_struct *)arguments;
+
+	/*
+
+	struct arg_struct
+	{
+		struct TwoDArray * graph;
+		struct DubArray * x_before;
+		struct DubArray * v;
+		int * iter;
+		int blockranking;
+	};
+
+	*/
+
+	if(args->blockranking == 0)
+	{
+		//we have yet to perform blockranking
+	}
+	double epsilon = 0.001;
 	struct DubArray d,P,ones,x_after;
 	int v_size,i; 
 	double c;
@@ -249,13 +297,36 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 	return x_after;
 }
 
-struct DubArray get_AdaptivePageRank(struct TwoDArray * G, struct DubArray * x_before, struct DubArray * v, int * iter, double epsilon)
+struct DubArray get_AdaptivePageRank(void * arguments)
 {	
+	//the structure of the arguments has changed
+	// v
+	struct arg_struct * args = (struct arg_struct *)arguments;
+
+	/*
+
+	struct arg_struct
+	{
+		struct TwoDArray * graph;
+		struct DubArray * x_before;
+		struct DubArray * v;
+		int * iter;
+		int blockranking;
+	};
+
+	*/
+
+	if(args->blockranking == 0)
+	{
+		//we have yet to perform blockranking
+	}
+
 	struct DubArray d,A_pp,ones,x_after,x_converged,x_test, A;
 	int v_size,i, converged_count = 0; 
 	double c;
 	double  delta = 0;
 	char * verbose;
+	double epsilon = 0.001;
 
 	// printf("Input damping factor c: ");
 	// scanf("%lf", &c);
@@ -450,9 +521,16 @@ void print_order(struct DubArray * a)
 
 }
 
-void obtain_graph_VE(char * filename, struct TwoDArray * a)
+void obtain_graph_VE(char * filename, struct TwoDArray * a, struct blockends * blocks)
 {
-	
+	// make room for the first block
+	blocks->array = (struct block *)malloc(sizeof(struct block));
+	blocks->size = 0;
+	blocks->array[0].first = -1;
+	blocks->array[0].last = -1;
+	blocks->array[0].full = 0;
+	int lastvertex;
+
 	int i,j,k, difference, max_col = 0;
 	// struct Array current_vertex;
 	// open the file containing the graph
@@ -468,6 +546,25 @@ void obtain_graph_VE(char * filename, struct TwoDArray * a)
 		// we have successfully opened the file
 		while(fscanf(ifp, "%d %d", &i, &j) == 2)
 		{
+			if(blocks->array[blocks->size - 1].full = 1 || blocks->size == 0)
+			{
+				blocks->size += 1;
+				blocks->array = (struct block *)realloc(blocks->array,
+					sizeof(struct block)*(blocks->size));
+				blocks->array[block.size -1].first = i;
+				blocks->array[block.size -1].last = -1;
+				blocks->array[block.size -1].full = 0;
+			}
+			//this signifies a break in the blocks
+			if(i == -1 && j == -1)
+			{
+				//if we've already added the
+				if(blocks->array[blocks->size - 1].first != -1)
+				{
+					blocks->array[blocks->size - 1].last = lastvertex;
+					blocks->array[blocks->size - 1].full = 1;
+				}
+			}
 			// there should be two values listed in this directed graph on each line
 			// i = from
 			// j = to
@@ -502,6 +599,8 @@ void obtain_graph_VE(char * filename, struct TwoDArray * a)
 			// print_2DArray(a);
 
 			// sleep(1);
+
+			lastvertex = i;
 
 		}
 	}
