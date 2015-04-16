@@ -18,6 +18,7 @@ struct node
     char * hyperlink;
     char * filtered_hyperlink;
     struct edge_ptr_array * edges;
+    char * host;
     int depth;
 };
 

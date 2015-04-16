@@ -67,6 +67,8 @@ char * switch_order(char * url);
 int index_under_wget = 1;
 char raw_links[] = "raw_links.txt";
 int totallinks, maxdepth;
+int hostnum = 0;
+int hostdesired = 50;
 
 int thread_test;
 
@@ -81,6 +83,7 @@ int main(int argc, char *argv[])
     struct node * temp;
     int i;
     char * domain;
+    char ** host50 = (char*)calloc(hostdesired,sizeof(char*));
 
     FILE * ofp = fopen(output,"w");
     if(ofp == NULL)
@@ -508,7 +511,7 @@ void read_and_save(char * raw_links, struct node * node_under_wget, struct strin
             // while there are lines left in the file to parse, keep parsing
             // only take links that have the domain in a reasonable location
             if((strstr(link,"//") != NULL) && (strstr(link,domain) != NULL) &&
-                (strstr(link,domain) - link < 12))
+                (strstr(link,domain) - link < 20))
             {
 
                 for(i = 0; ((link[i] != '\0') && (&(link[i]) 
@@ -931,7 +934,7 @@ char * switch_order(char * url)
 
     // http://(www.google.com) or http://(google.com)
     char * beginning = strstr(url, "//");
-    char * middle, * end, *path, * newurl, * testurl;
+    char * middle, * end, * newurl, * testurl;
 
     testurl = NULL;
 
@@ -1061,14 +1064,14 @@ char * switch_order(char * url)
     }
 
 
-    newurl = (char *)malloc(final_length);
-    memset(newurl,'\0',final_length);
+    
 
     // set up both the pieces of the url we will look at and the characters that we will look for
     // in order to shift to the next pointer
-    pieces[0] = end;            //(com)
-    pieces[1] = middle;         //(google.com)
-    pieces[2] = beginning;      //(www.)
+    pieces[0] = end;                //(com)
+    pieces[1] = middle;             //(google.com)
+    pieces[2] = beginning;          //(www.)
+    pieces[3] = strchr(end,'/');    //(/asdsadsadd) or ('/') or ('\0')
 
     // printf("\n%s\n",end );
     // printf("%s\n", middle);
@@ -1077,10 +1080,23 @@ char * switch_order(char * url)
     
 
 
-
-    stops[0] = seperator[0];
+    if(strchr(end,':') != NULL)
+    {
+        stops[0] = ':';
+        if (strchr(end,'/') != NULL)
+            final_length -= (strchr(end,'/')-strchr(end,':'));
+        else
+            final_length -= (strchr(end,'\0')-strchr(end,':'));
+    }
+    else
+    {
+        stops[0] = seperator[0];
+    }
     stops[1] = '.';
     stops[2] = '.';
+
+    newurl = (char *)malloc(final_length);
+    memset(newurl,'\0',final_length);
 
     int pieces_stops_count = 0;
     int url_count = 0;
@@ -1115,35 +1131,11 @@ char * switch_order(char * url)
 
     // printf("\n");
 
-    if(stops[0] == '/')
-    {
-        // http://(www.google.com(/jasdkadksa)) or http://(google.com/(asdsadas))
-
-        if(shortlink)
-        {
-            path = strchr(url,'/');            
-        }
-        else
-        {
-            path = strstr(url, "//") + 2;
-            path = strchr(path,'/');
-        }
-
-
-        i = 0;
-
-        // printf("newurl = %s, sizeof(newurl) = %d\n",newurl, (int)(strlen(newurl)) );
-        do
-        {
-            // copy the remainder of the path to the new url
-            // printf("newurl = %s, sizeof(newurl) = %d\n",newurl, (int)(strlen(newurl)) );
-            newurl[url_count++] = path[i++];
-        }while(path[i] != '\0');
-    } 
+    strcpy(&(newurl[url_count]),pieces[3]);
     // printf("here\n");
 
     // copy the terminator
-    newurl[url_count] = '\0';
+    // newurl[url_count] = '\0';
 
     //clean up;
     free(pieces);
@@ -1177,9 +1169,10 @@ char * switch_order_domain(char * url, char * domain)
     if(beginning == NULL)
     {
         // if there isn't http(s):// for some reason
-        if(testurl != NULL)
-            free(testurl);
-        return NULL;
+        // if(testurl != NULL)
+        //     free(testurl);
+        // return NULL;
+        beginning = url;
     }
     else
     {
@@ -1222,14 +1215,27 @@ char * switch_order_domain(char * url, char * domain)
     // end = ca/asdadddasd..asdsadasd
 
     int endl,begl,midl;
+    char * seperator;
+
 
     if(strchr(end,'/') != NULL)
-        endl = strchr(end,'/') - end;
+    {
+        seperator = strchr(end,'/');
+        endl = seperator - end;
+    }
     else
-        endl = strchr(end,'\0') - end;
+    {
+        seperator = strchr(end,'\0');
+        endl = seperator - end;
+    }
+
+    if(strchr(end,':') != NULL && strchr(end,':') < seperator)
+        endl -= (seperator - strchr(end,':'));
 
     midl = end-middle-1;
     begl = strstr(beginning,domain) - beginning - 1;
+
+    // printf("beginning = %s, length = %d\nmiddle = %s, length = %d\nend = %s, length = %d\n",beginning,begl,middle,midl,end,endl );
 
     strncpy(newurl,end,endl);
     newurl[endl] = '.';
@@ -1303,8 +1309,9 @@ void remove_links_and_edges(struct Linked_list *a)
         free(temp->hyperlink);
         free(temp->filtered_hyperlink);
         if(temp->edges->array != NULL)
-            // printf("index = %d\n",temp->index );
             free(temp->edges->array);
+        if(temp->host != NULL)
+            free(temp->host);
         free(temp->edges);
         to_next(&temp);
     } while (temp != a->root);

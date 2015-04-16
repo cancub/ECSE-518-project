@@ -8,7 +8,7 @@
 #include "twodarrays.h"
 #include "dubvmalg.h"
 
-#define PERIODAD	7
+#define PERIODAD	1
 #define PERIODDEL	100
 
 // struct IntArray
@@ -24,21 +24,26 @@ struct DubArray get_AdaptivePageRank(struct TwoDArray * G, struct DubArray * x_b
 void obtain_graph_VE(char * filename, struct TwoDArray * a);
 void print_order(struct DubArray * result);
 void mtranspose(struct DubArray * A, int n);
+void add_directory(char ** str, int size, char * file);
 
 
 double epsilon = 0.001;
 
 int adaptive = 0;
 
+int * converge;
+
 int main (int argc, char *argv[]){
 	
-	char * filename;
+	char * filename = (char*)malloc(1024);
 	struct TwoDArray temp_array;
 	struct DubArray x_0, start_v, result;
 	// char filenum;
 	// char * x_type = (char*)malloc(sizeof(char));
 	double x_vals,fraction;
-	int itercount = 0;
+	int i, itercount = 0;
+
+	converge = (int*)calloc(2048, sizeof(int));
 
 	construct_2DArray(&temp_array);
 
@@ -56,7 +61,7 @@ int main (int argc, char *argv[]){
 		if(strlen(argv[1]) == 1)
 		{
 			adaptive = argv[1][0] - '0';
-			filename = "/home/al/Documents/C/ECSE-518-project/output.txt";
+			add_directory(&filename,1024,"output.txt");
 		}
 		else
 			filename = argv[1];
@@ -115,7 +120,7 @@ int main (int argc, char *argv[]){
 
 	// printf("Result = \n");
 	// print_DubArray(&result);
-	// print_order(&result);
+	print_order(&result);
 	printf("\n");
 
 	printf("Time to converge = %5.3f s\n", (double)(msec/1000)+((double)(msec%1000))/1000 );
@@ -124,6 +129,25 @@ int main (int argc, char *argv[]){
 	free(result.array);
 	destruct_2DArray(&temp_array);
 
+	int * histo = (int*)calloc(1000,sizeof(int));
+	int max = 0;
+
+	// printf("almost done\n");
+	for(i = 0; i < temp_array.size; i++)
+	{
+		printf("converge[%d] = %d \n", i,converge[i]);
+		histo[converge[i]] += 1;
+		if (converge[i] > max)
+			max = converge[i];
+	}
+
+	for(i = 0; i < max; i++)
+		printf("histogram[%d] = %d\n",i,histo[i] );
+	printf("\n");
+	free(converge);
+	free(histo);
+	// free(filename);
+	
 	return 0;
 
 }
@@ -198,8 +222,8 @@ struct DubArray get_PageRank(struct TwoDArray * G, struct DubArray * x_before, s
 	mtranspose(&P, v_size);		// P <- P^T
 
 
-	// printf("P matrix in use:\n");
-	// print_DubMatrix(&P, v_size);
+	printf("P matrix in use:\n");
+	print_DubMatrix(&P, v_size);
 	// printf("\n");
 
 	i = 0;
@@ -312,16 +336,9 @@ struct DubArray get_AdaptivePageRank(struct TwoDArray * G, struct DubArray * x_b
 
 		if(((*iter) % PERIODDEL) == 0)
 		{
-			// printf("x_before\n");
-			// print_DubArray(x_before);
 			x_test = alphaATtimesx(1,&A,x_before);
-			// printf("x_test\n");
-			// print_DubArray(&x_test);
 			delta = differce_vector_length(&x_test,x_before);
-			// printf("delta = %f, epsilon = %15.14f\n",delta, epsilon);
-			// printf("\n\n");
 			free(x_test.array);
-			// sleep(1);
 		}
 
 		if(((*iter) % PERIODAD) == 0)
@@ -333,15 +350,15 @@ struct DubArray get_AdaptivePageRank(struct TwoDArray * G, struct DubArray * x_b
 
 			if (converged_count == v_size)
 			{
-				// printf("here\n");
+				printf("here\n");
 				// print_DubArray(&x_after);
 				break;
 			}
-			// for(i = 0; i < v_size; i++)
-			// {
-			// 	if(C[i])
-			// 		printf("%d ",i );
-			// }
+			for(i = 0; i < v_size; i++)
+			{
+				if(C[i] == 1 && converge[i] == 0)
+					converge[i] = *iter;
+			}
 			// printf("\n\n");
 		}
 
@@ -386,6 +403,7 @@ struct DubArray get_AdaptivePageRank(struct TwoDArray * G, struct DubArray * x_b
 	free(A.array);
 	free(A_pp.array);
 	free(x_converged.array);
+	free(C);
 
 	return x_after;
 }
@@ -592,6 +610,21 @@ void mtranspose(struct DubArray * A, int n)
 			A->array[j*n+i] = temp;
 		}
 	}
+
+}
+
+void add_directory(char ** str, int size, char * file)
+{
+	getcwd(*str,size);
+
+	char * test = *str;
+
+	while(strchr(test,'/') != NULL)
+	{
+		test = strchr(test,'/')+1;
+	}
+
+	strcpy(&((*str)[test-*str]),file);
 
 }
 

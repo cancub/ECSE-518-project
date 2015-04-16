@@ -7,37 +7,185 @@
 #include "linked_list.h"
 // #include <cblas.h>
 
-// ---------------
-void append_edges(struct node * node_under_wget,int *** possible_array, int * elements)
+// -------------------------------------getting directory --------------------------------------------------------------
+void add_directory(char * str, int size, char * file)
 {
-    int i,j;
-    
-    for(i = 0; i < *elements; i++)
-    {
-        for(j = 0; j<node_under_wget->edges->size; j++)
-        {
-            if(node_under_wget->edges->array[j] == possible_array[i])
-                break;  
-        }
-        if(j != node_under_wget->edges->size)
-        {
-            node_under_wget->edges->size += 1;
-            node_under_wget->edges->array = (int ***)realloc(node_under_wget->edges->array,
-                (int)(node_under_wget->edges->size));
-            node_under_wget->edges->array[node_under_wget->edges->size-1] = possible_array[i];
-        }  
-        else
-        {
-            *(elements) -= 1
-        } 
-    }
+	getcwd(str,size);
+
+	char * test = str;
+
+	while(strchr(test,'/') != NULL)
+	{
+		test = strchr(test,'/')+1;
+	}
+
+	strcpy(&(str[test-str]),file);
+
 }
 
 int main()
 {
+	char * mystr = (char*)malloc(1024);
+
+	add_directory(mystr,1024,"output.txt");
+
+	printf("%s\n",mystr );
+	
+}
+
+//--------------------what does calloc do for strings?-------------------------------------------------------------------------------
+
+// int main()
+// {
+//     char ** test = (char**)calloc(50,sizeof(char*));
+
+//     printf("test[20] = %s\n",test[20] );
+// }
+
+//-----------------------------testing for funky links with a port after the .com------------------------------
+// char * switch_order_domain(char * url, char * domain)
+// {
+
+//     //domain = google.com
+
+//     // http:(//www.google.com) or http:(//google.com)
+//     char * beginning = strstr(url, "//");
+//     char * middle, * end, * newurl, * testurl;
+
+//     testurl = NULL;
+
+//     if(beginning == NULL)
+//     {
+//         // if there isn't http(s):// for some reason
+//         // if(testurl != NULL)
+//         //     free(testurl);
+//         // return NULL;
+//         beginning = url;
+//     }
+//     else
+//     {
+//         // move past the double slash
+//         beginning = &(beginning[2]);
+//     }
+
+//     // google.com/asdasd.asdsd
+//     middle = strstr(beginning,domain);
+//     end = strchr(middle,'.')+1;
+
+//     // for strange links like www.alumni.mcgill.ca with a useless (www.)
+//     if( (strchr(beginning,'.')+1 != middle) && (strstr(beginning,"www") == beginning) )
+//     {
+//         beginning = strchr(beginning,'.')+1;         //(www.alumni.mcgill.ca) --> www.(alumni.mcgill.ca)
+//     }
+
+
+//     if( (strchr(strchr(beginning,'.')+1,'.') == NULL) || 
+//         ((strchr(strchr(beginning,'.')+1,'.') > strchr(beginning,'/')) &&
+//         (strchr(strchr(beginning,'.')+1,'.') != NULL) && (strchr(beginning,'/') != NULL)))
+//     {
+//         // we have a link with only one period
+//         // add a www to the beginning of beginning
+//         testurl = (char *)malloc(strlen("www.") + strlen(beginning) + 1);     
+//         testurl[4 + strlen(beginning)] = '\0';
+
+//         strcpy(testurl,"www.");
+//         strcpy(&(testurl[4]),beginning);
+//         testurl[4 /* "www." */ + strlen(beginning)] = '\0';
+//         beginning = testurl;
+//     }
+
+//     int final_length = (int)(strlen(beginning)) +1;
+//     newurl = (char*)malloc(final_length);
+
+//     // at this point, 
+//     // beginning = <anything>.mcgill.ca/asdadddasd..asdsadasd
+//     // middle = mcgill.ca/asdadddasd..asdsadasd
+//     // end = ca/asdadddasd..asdsadasd
+
+//     int endl,begl,midl;
+//     char * seperator;
+
+
+//     if(strchr(end,'/') != NULL)
+//     {
+//         seperator = strchr(end,'/');
+//         endl = seperator - end;
+//     }
+//     else
+//     {
+//         seperator = strchr(end,'\0');
+//         endl = seperator - end;
+//     }
+
+//     if(strchr(end,':') != NULL && strchr(end,':') < seperator)
+//         endl -= (seperator - strchr(end,':'));
+
+//     midl = end-middle-1;
+//     begl = strstr(beginning,domain) - beginning - 1;
+
+//     printf("beginning = %s, length = %d\nmiddle = %s, length = %d\nend = %s, length = %d\n",beginning,begl,middle,midl,end,endl );
+
+//     strncpy(newurl,end,endl);
+//     newurl[endl] = '.';
+//     strncpy(&(newurl[endl+1]), middle,midl);
+//     newurl[midl+endl+1] = '.';
+//     strncpy(&(newurl[midl+endl+2]),beginning,begl);
+//     if(strchr(end,'/') != NULL)
+//     {
+//         newurl[midl+endl+begl + 2] = '/';
+//         strcpy(&(newurl[midl+endl+begl + 3]),strchr(end,'/')+1);
+//     }
+//     else
+//         newurl[midl+endl+begl + 2] = '\0';
     
 
-}
+//     if(testurl != NULL)
+//         free(testurl);
+
+
+//     return newurl;
+// }
+
+
+// int main()
+// {
+//     char * test = "blogs.mcgill.ca:80/cambam/2012/10/15/empty-sets-art-showthe-plant-18-august-2012";
+
+//     printf("result = %s\n", switch_order_domain(test,"mcgill.ca"));
+//     return 0;
+// }
+
+// ---------------
+// void append_edges(struct node * node_under_wget,int *** possible_array, int * elements)
+// {
+//     int i,j;
+    
+//     for(i = 0; i < *elements; i++)
+//     {
+//         for(j = 0; j<node_under_wget->edges->size; j++)
+//         {
+//             if(node_under_wget->edges->array[j] == possible_array[i])
+//                 break;  
+//         }
+//         if(j != node_under_wget->edges->size)
+//         {
+//             node_under_wget->edges->size += 1;
+//             node_under_wget->edges->array = (int ***)realloc(node_under_wget->edges->array,
+//                 (int)(node_under_wget->edges->size));
+//             node_under_wget->edges->array[node_under_wget->edges->size-1] = possible_array[i];
+//         }  
+//         else
+//         {
+//             *(elements) -= 1
+//         } 
+//     }
+// }
+
+// int main()
+// {
+    
+
+// }
 
 // --------------------want to check the host against the current host ---------------------
 
