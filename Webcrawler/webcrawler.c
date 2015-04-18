@@ -66,7 +66,7 @@ int add_hostname(char * url, char * domain);
 
 
 int index_under_wget = 1;
-char raw_links[] = "raw_links.txt";
+char * raw_links;
 int totallinks, maxdepth;
 int hostnum = 0;
 int hostdesired = 1;
@@ -79,13 +79,72 @@ int main(int argc, char *argv[])
     char * link;
     struct stringArray * links_to_crawl = (struct stringArray *)malloc(sizeof(struct stringArray));
     struct Linked_list * parsed_links = initialize_linked_list(0);
-    char * filtered = "filtered_links.txt"; // where we will store the final, sorted list of links
-    char * output = "output.txt";       // where we will store the edges which describe the graph
+    char * filtered; // where we will store the final, sorted list of links
+    char * output;       // where we will store the edges which describe the graph
     struct node * node_under_wget;
     struct node * temp;
     int i;
+    char * totallinks_str, * maxdepth_str;
     char * domain;
     hostlist = (char**)calloc(hostdesired,sizeof(char*));
+
+    
+
+
+    FILE * clear_hosts = fopen("hostnames.txt","w");
+    fclose(clear_hosts);
+
+    // find the link we will start the crawl with
+    // if(argc == 4)
+    // {
+    //     link = argv[1];
+    //     totallinks = string_to_int(argv[2]);
+    //     maxdepth = string_to_int(argv[3]);
+    // }
+    // else if (argc == 3)
+    // {
+    //     link = argv[1];
+    //     totallinks = string_to_int(argv[2]);
+    //     maxdepth = 2;
+    // }
+    // else if(argc == 2)
+    // {
+    //     link = argv[1];
+    //     totallinks = 200;
+    //     maxdepth = 2;
+    // }
+    // else
+    // {
+    //     link = "http://www.google.com";
+    //     totallinks = 200;
+    //     maxdepth = 2;
+    // }
+
+    link = argv[1];
+    totallinks_str = argv[2];
+    totallinks = string_to_int(totallinks_str);
+    maxdepth_str = argv[3];
+    maxdepth = string_to_int(maxdepth_str);
+
+    time_t rawtime;
+    struct tm *info;
+    char buffer[80];
+
+    time( &rawtime );
+
+    info = localtime( &rawtime );
+
+    strftime(buffer,80,"%x - %I:%M%p", info);
+
+    raw_links = (char*)malloc(2048);
+    strcpy(raw_links,"raw_links_");
+    strcpy(&(raw_links[strlen("raw_links_")]),totallinks_str);
+
+    strcpy(&(raw_links[strlen("raw_links_")]),buffer);
+    output = (char*)malloc(2048);
+    strcpy(output,"output_");
+    filtered = (char*)malloc(2048);
+    strcpy(filtered,"filtered_links_");
 
     FILE * ofp = fopen(output,"w");
     if(ofp == NULL)
@@ -102,34 +161,6 @@ int main(int argc, char *argv[])
     }
 
 
-    FILE * clear_hosts = fopen("hostnames.txt","w");
-    fclose(clear_hosts);
-
-    //find the link we will start the crawl with
-    if(argc == 4)
-    {
-        link = argv[1];
-        totallinks = string_to_int(argv[2]);
-        maxdepth = string_to_int(argv[3]);
-    }
-    else if (argc == 3)
-    {
-        link = argv[1];
-        totallinks = string_to_int(argv[2]);
-        maxdepth = 2;
-    }
-    else if(argc == 2)
-    {
-        link = argv[1];
-        totallinks = 200;
-        maxdepth = 2;
-    }
-    else
-    {
-        link = "http://www.google.com";
-        totallinks = 200;
-        maxdepth = 2;
-    }
 
     domain = get_domain(link);
     add_hostname(link,domain);
@@ -229,12 +260,13 @@ int main(int argc, char *argv[])
         {
             // there has been a change in hosts, so we are at the next block
             fprintf(ofp, "-1\t-1\n");
-            printf("--------------------\ntemp_host = %s, old host = %s\n",temp_host,host);
+            // printf("--------------------\ntemp_host = %s, old host = %s\n",temp_host,host);
             // fprintf(sorted_link_file, "-------------------\n");
             free(host);
             host = "";
             host = host_check(host,temp->filtered_hyperlink);
         }
+        
         
         fprintf(sorted_link_file, "%s\n",temp->filtered_hyperlink);
 
@@ -247,21 +279,21 @@ int main(int argc, char *argv[])
                 // edge-->ptr-->index
                 if(*(temp->edges->array[i]) != NULL)
                 {
-                    printf("printing edge %d->%d\n", temp->index,**(temp->edges->array[i]));
+                    // printf("printing edge %d->%d\n", temp->index,**(temp->edges->array[i]));
                     fprintf(ofp, "%d\t%d\n", temp->index,**(temp->edges->array[i]));
                     printed = 1;
                 }
             }
             if(printed == 0)
             {
-                printf("printing token edge %d->0\n", temp->index);
+                // printf("printing token edge %d->0\n", temp->index);
                 fprintf(ofp, "%d\t0\n", temp->index);
             }
         }
         else
         {
             // this way we know where the last and first links in a block are
-            printf("printing token edge %d->0\n", temp->index);
+            // printf("printing token edge %d->0\n", temp->index);
             fprintf(ofp, "%d\t0\n", temp->index);
         }
         to_next(&temp);
@@ -294,6 +326,10 @@ int main(int argc, char *argv[])
     fclose(ofp);
 
     printf("\nWebcrawl complete\n");
+
+    free(raw_links);
+    free(output);
+    free(filtered);
 
     return 0;
 
@@ -603,6 +639,9 @@ void read_and_save(char * raw_links, struct node * node_under_wget, struct strin
                     free(newlink);
                     newlink = remove_extra(link);
                 }
+
+                
+
                 
                 // find if the link we are looking at already exists in the links we have crawled/will crawl
                 // and obtain a pointer to a pointer to the index
@@ -1329,7 +1368,22 @@ void add_link_string(struct node * n, char * link, char * domain)
 {
     n->hyperlink = (char*)malloc(strlen(link)+1);
     strcpy(n->hyperlink, link); 
-    n->filtered_hyperlink = switch_order_domain(link,domain);
+    if(strstr(n->hyperlink,"https") != NULL)
+    {
+        // we need some way of distringuishing http from https in the filtered link
+        // so we will add four extra spaces to insert "/(S)" at the end of the link
+        // this will also help with sorting purposes
+        // the slash prevents this from being considered part of a new host.
+        char * temp = switch_order_domain(link,domain);
+        n->filtered_hyperlink = (char*)malloc(strlen(temp) + 4 + 1/*for the "\0"*/);
+        strcpy(n->filtered_hyperlink,temp);
+        strcpy(&(n->filtered_hyperlink[strlen(temp)]),"/(S)");
+        free(temp);
+    }
+    else
+    {
+        n->filtered_hyperlink = switch_order_domain(link,domain);
+    }
 }
 
 void remove_links_and_edges(struct Linked_list *a)

@@ -182,24 +182,39 @@ void modify_CN(struct DubArray * A, struct DubArray * A_CN, int n, int * cols_to
 	// Add the columns to A_CN from A that correspond to the values in cols_to_add
 	// remove all the rows corresponding to the values of C that are 0
 
-	int i;
+	int i,j;
 	int * to_zero = (int*)calloc(n,sizeof(int));
 	int num_to_zero = 0;
+	int method = 0;
+	int col_to_add;
 
-	//transpose to add columns as rows
-	mtranspose(A,n);
-	mtranspose(A_CN,n);
-
-	// print_DubMatrix(A);
-	for(i = 0; cols_to_add[i] != 0; i++)
+	if (method == 0)
 	{
-		cblas_dcopy(n,&(A->array[(cols_to_add[i]-1)*n]),1,&(A_CN->array[(cols_to_add[i]-1)*n]),1);
-		// print_DubMatrix(A_CN);
-		// sleep(1);
-	}
+		//transpose to add columns as rows
+		mtranspose(A,n);
+		mtranspose(A_CN,n);
 
-	mtranspose(A,n);
-	mtranspose(A_CN,n);
+		// print_DubMatrix(A);
+		for(i = 0; cols_to_add[i] != 0; i++)
+		{
+			cblas_dcopy(n,&(A->array[(cols_to_add[i]-1)*n]),1,&(A_CN->array[(cols_to_add[i]-1)*n]),1);
+			// print_DubMatrix(A_CN);
+			// sleep(1);
+		}
+
+		mtranspose(A,n);
+		mtranspose(A_CN,n);
+	}
+	else
+	{
+		for(i = 0; cols_to_add[i] != 0; i++)
+		{
+			col_to_add = cols_to_add[i];
+			for(j = col_to_add-1 ; j < col_to_add + (n-1)*n; j += n)
+				A_CN->array[j] = A->array[j];
+		}
+	}
+		
 
 	//build the list of indices of elements that have converged
 	for(i = 0; i < n; i++)
