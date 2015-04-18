@@ -2,9 +2,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <math.h>
 
-void print_DubMatrix(struct DubArray * a, int row_length)
+void print_DubMatrix(struct DubArray * a)
 {
+	int row_length = (int)(sqrt((int)(a->size)));
 	int i;
 	for(i = 0; i < a->size; i++)
 	{

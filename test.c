@@ -4,34 +4,213 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include "linked_list.h"
+#include <math.h>
+// #include "linked_list.h"
+#include "dubarrays.h"
 // #include <cblas.h>
 
-// -------------------------------------getting directory --------------------------------------------------------------
-void add_directory(char * str, int size, char * file)
+// ---------------------------------make sure that sparser matrices take less time -----------------------------------------
+
+
+void zero_rows(struct DubArray * matrix, int * rows)
 {
-	getcwd(str,size);
 
-	char * test = str;
+}
 
-	while(strchr(test,'/') != NULL)
-	{
-		test = strchr(test,'/')+1;
-	}
-
-	strcpy(&(str[test-str]),file);
-
+void zero_cols(struct DubArray * matrix, int * cols)
+{
+	
 }
 
 int main()
 {
-	char * mystr = (char*)malloc(1024);
+	int * rows = (int*)calloc(3,sizeof(int));
+	int * cols = (int*)calloc(3,sizeof(int));
 
-	add_directory(mystr,1024,"output.txt");
+	printf("%d\n", (int)(sqrt(25)) );
 
-	printf("%s\n",mystr );
-	
+	//multiply with matrix one and check the time
+	clock_t start = clock(), diff;
+
+	diff = clock() - start;
+	int msec = diff*1000/CLOCKS_PER_SEC;
+	printf("Time to converge = %5.3f s\n", (double)(msec/1000)+((double)(msec%1000))/1000 );
+
+
+	//multiply 
+	start = clock();
+
+	diff = clock() - start;
+	msec = diff*1000/CLOCKS_PER_SEC;
+	printf("Time to converge = %5.3f s\n", (double)(msec/1000)+((double)(msec%1000))/1000 );
+
+	free(rows);
+	free(cols);
 }
+
+
+// ------------------------------------i'm gonna solve this modified pagerank bastard --------------------------------------
+
+// struct DubArray modifiedAPR(struct TwoDArray * G, struct DubArray * x_before, struct DubArray * v, int * iter, double epsilon)
+// {	
+// 	struct DubArray d,A_pp,ones,x_after,x_converged,x_test, A;
+// 	int v_size,i, converged_count = 0; 
+// 	double c;
+// 	double  delta = 0;
+// 	char * verbose;
+
+// 	// printf("Input damping factor c: ");
+// 	// scanf("%lf", &c);
+// 	c=0.85;
+// 	// printf("Test value epsilon = 1x10^-");
+// 	// scanf("%d", &j);
+// 	// printf("Verbose? <y/n>: ");
+// 	// scanf("%s", verbose);
+// 	verbose = "n";
+
+// 	// for (i = 0; i < j; i++)
+// 	// {
+// 	// 	epsilon /= 10;
+// 	// }
+
+// 	v_size = (int)(x_before->size);
+// 	ones = initialize_vector(v_size,1);
+// 	d = initialize_vector(v_size,0);
+// 	x_after = initialize_vector(v_size,0);
+// 	x_converged = initialize_vector(v_size,0);
+
+// 	// C is the bitmap for elements which have converged or not
+// 	// C[i] = 0 if the element has yet to converge
+// 	// C[i] = 1 if the element has converged
+// 	int * C = (int*)calloc(v_size,sizeof(int));
+
+// 	A = initialize_graph(G,&d);
+
+// 	/* 
+// 	In keeping with the labeling in the paper, A will be our original pagerank matrix (the transpose of the P'' matrix)
+// 	and A_pp will be A'', the matrix from which we shall periodically zero out rows
+// 	*/
+// 	scale(&A,c);
+// 	alphaxtimesyTplusA(c,&d,v,&A);
+// 	alphaxtimesyTplusA((1-c),&ones,v,&A);
+// 	mtranspose(&A, v_size);			// A <- P^T, this will remain as the 
+// 	A_pp = makecopy(&A);			// A is the matrix that will remain as is for periodic testing
+
+
+// 	// printf("P matrix in use:\n");
+// 	// print_DubMatrix(&P);
+// 	// printf("\n");
+
+// 	i = 0;
+
+// 	do
+// 	{	
+
+// 		free(x_after.array);
+// 		x_after = alphaATtimesx(1,&A_pp,x_before);		// x_after <- A''x_before
+// 		alphaxplusy_y(1,&x_converged,&x_after);	// x_after <- A''x_before + x_converged
+		
+		
+
+// 		if(((*iter) % PERIODDEL) == 0)
+// 		{
+// 			x_test = alphaATtimesx(1,&A,x_before);
+// 			delta = differce_vector_length(&x_test,x_before);
+// 			free(x_test.array);
+// 		}
+
+// 		if(((*iter) % PERIODAD) == 0)
+// 		{
+// 			// update the bitmap for convergence to determine if any elements have converged
+// 			// and then update x_converged with a zero in that location and the PageRank matrix
+// 			// with zeros in the column corresponding to those indices
+// 			detect_converged(x_before,&x_after, &x_converged, epsilon, &C, &A_pp, &converged_count);
+
+// 			if (converged_count == v_size)
+// 			{
+// 				printf("here\n");
+// 				// print_DubArray(&x_after);
+// 				break;
+// 			}
+// 			for(i = 0; i < v_size; i++)
+// 			{
+// 				if(C[i] == 1 && converge[i] == 0)
+// 					converge[i] = *iter;
+// 			}
+// 			// printf("\n\n");
+// 		}
+
+// 		*iter += 1;
+
+// 		if (verbose[0] == 'y' || verbose[0] == 'Y' || verbose[0] == '\n')
+// 		{
+// 			printf("---------------------------------------------------------\n Round %d\n",i++);
+// 			printf("x to start round = \t");
+// 			print_DubArray(x_before);
+// 			printf("x to end round = \t");
+// 			print_DubArray(&x_after);
+// 			printf("delta = %9.7f\n\n",delta );
+// 			sleep(1);
+// 		}
+// 		// free(x_after);
+
+// 		// move the values to start the next iteration
+// 		free((*x_before).array);
+// 		*x_before = makecopy(&x_after);
+// 		// printf("x_after bottom\n");
+// 		// print_DubArray(&x_after);
+// 		// printf("x_before bottom\n");
+// 		// print_DubArray(x_before);
+// 		// printf("\n\n");
+
+
+// 		// printf("pre_delta - delta = %10.8f\n", dub_abs(pre_delta - delta));
+// 		// printf("epsilon - delta = %10.8f\n", epsilon - delta );
+
+// 	}while(delta > epsilon);
+
+// 	// printf("here\n");
+
+// 	if ((delta > epsilon) && (converged_count != v_size))
+// 	{
+// 		x_after.array = NULL;
+// 	}
+
+// 	free(ones.array);
+// 	free(d.array);
+// 	free(A.array);
+// 	free(A_pp.array);
+// 	free(x_converged.array);
+// 	free(C);
+
+// 	return x_after;
+// }
+
+// -------------------------------------getting directory --------------------------------------------------------------
+// void add_directory(char * str, int size, char * file)
+// {
+// 	getcwd(str,size);
+
+// 	char * test = str;
+
+// 	while(strchr(test,'/') != NULL)
+// 	{
+// 		test = strchr(test,'/')+1;
+// 	}
+
+// 	strcpy(&(str[test-str]),file);
+
+// }
+
+// int main()
+// {
+// 	char * mystr = (char*)malloc(1024);
+
+// 	add_directory(mystr,1024,"output.txt");
+
+// 	printf("%s\n",mystr );
+	
+// }
 
 //--------------------what does calloc do for strings?-------------------------------------------------------------------------------
 

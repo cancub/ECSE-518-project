@@ -19,7 +19,7 @@ struct IntArray
 // double dotproduct(struct DubArray * x, struct DubArray * y);
 struct DubArray initialize_vector(int length, double value);
 void print_DubArray(struct DubArray * a);
-void print_DubMatrix(struct DubArray * a, int row_length);
+void print_DubMatrix(struct DubArray * a);
 int compare_DubArrays(struct DubArray * a, struct DubArray * b);
 // void free_DubArray(struct DubArray * a);
 

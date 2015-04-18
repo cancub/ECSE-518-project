@@ -62,15 +62,17 @@ void print_links(struct Linked_list * a);
 char * flipper(char * test);
 char * switch_order_domain(char * url, char * domain);
 char * switch_order(char * url);
+int add_hostname(char * url, char * domain);
 
 
 int index_under_wget = 1;
 char raw_links[] = "raw_links.txt";
 int totallinks, maxdepth;
 int hostnum = 0;
-int hostdesired = 50;
+int hostdesired = 1;
 
 int thread_test;
+char ** hostlist;
 
 int main(int argc, char *argv[])
 {
@@ -83,7 +85,7 @@ int main(int argc, char *argv[])
     struct node * temp;
     int i;
     char * domain;
-    char ** host50 = (char*)calloc(hostdesired,sizeof(char*));
+    hostlist = (char**)calloc(hostdesired,sizeof(char*));
 
     FILE * ofp = fopen(output,"w");
     if(ofp == NULL)
@@ -98,6 +100,10 @@ int main(int argc, char *argv[])
         printf("Could not open %s for writing\n", filtered);
         return(-1);
     }
+
+
+    FILE * clear_hosts = fopen("hostnames.txt","w");
+    fclose(clear_hosts);
 
     //find the link we will start the crawl with
     if(argc == 4)
@@ -126,6 +132,7 @@ int main(int argc, char *argv[])
     }
 
     domain = get_domain(link);
+    add_hostname(link,domain);
 
     links_to_crawl->size = 1;
     links_to_crawl->array = (struct link_index_depth *)malloc(totallinks*sizeof(struct link_index_depth));
@@ -143,8 +150,8 @@ int main(int argc, char *argv[])
         link = (links_to_crawl->array[index_under_wget-1]).str;
         // if(strstr())
 
-        printf("\n-----------------------\n\nCrawl %d of %d:\n", index_under_wget,
-            (int)(links_to_crawl->size));
+        printf("\n-----------------------\n\nCrawl %d of %d (%.2f%% intermediate completion):\n", index_under_wget,
+            (int)(links_to_crawl->size), 100*((double)(index_under_wget))/((double)(links_to_crawl->size)));
 
         printf("looking at link %s\n",link); 
 
@@ -274,6 +281,14 @@ int main(int argc, char *argv[])
         free(temp_host);
 
     free(domain);
+
+    for(i = 0; i < hostnum; i++)
+    {
+        printf("host[%d] = %s\n",i,hostlist[i] );
+        free(hostlist[i]);
+    }
+
+    free(hostlist);
 
     fclose(sorted_link_file);
     fclose(ofp);
@@ -479,16 +494,6 @@ void read_and_save(char * raw_links, struct node * node_under_wget, struct strin
     printf("Number of links found = %d\n", lines);
 
 
-    // we can either refrain from adding links to crawl later or include them, based on the
-    // value from the calling function. Edges will be added regardless
-    if(node_under_wget->depth < maxdepth)
-    {
-        printf("Adding edges and appending links\n");
-    }
-    else
-    {   
-        printf("Adding edges\n");
-    }
 
     if(lines)
     {
@@ -503,6 +508,7 @@ void read_and_save(char * raw_links, struct node * node_under_wget, struct strin
 
         char * redirected_link = NULL;
         char * test_link = NULL;
+        int add_test;
         // char * flipper_link = NULL;
 
     
@@ -510,14 +516,33 @@ void read_and_save(char * raw_links, struct node * node_under_wget, struct strin
         {
             // while there are lines left in the file to parse, keep parsing
             // only take links that have the domain in a reasonable location
+
+            //only look at links within the same domain as the starting link
             if((strstr(link,"//") != NULL) && (strstr(link,domain) != NULL) &&
                 (strstr(link,domain) - link < 20))
             {
 
+                // make all the letters lowercase except for those in the path
                 for(i = 0; ((link[i] != '\0') && (&(link[i]) 
                     != strchr(strstr(link,"//")+2,'/') )); i++)
                 {
                     link[i]=tolower(link[i]);
+                }
+
+                // http://www/mcgill.ca
+                if(strchr(strstr(link,"//")+2,'/') < strchr(link,'.'))
+                    continue;
+
+                // this will return a 1 if either the hostname did not exist
+                // but was added to the non-full list of hostnames or it already exists
+                // in the list. 0 is returned if the hostname does not exist in the list
+                // and the hostname list has reached maximum capacity
+                add_test = add_hostname(link, domain);
+
+                if(add_test == 0)
+                {
+                    // we found a link we won't use, so skip to the next one
+                    continue;
                 }
 
                 free(newlink);
@@ -798,12 +823,15 @@ int ** quick_search(struct stringArray * links_to_crawl, char * link)
     // the actual index
 
     int i,j;
+    char * r_link = remove_extra(link);
     int length = strlen(link);
     struct link_index_depth * testlink;
+    char * testlink_string;
 
     for(i = 0;i<links_to_crawl->size;i++)
     {
         testlink = &((links_to_crawl->array)[i]);
+        testlink_string = remove_extra(testlink->str);
         // if(strstr(link,"aoc.mcgill.ca/site") != NULL)
         // {
             // printf("\n\n");
@@ -823,11 +851,15 @@ int ** quick_search(struct stringArray * links_to_crawl, char * link)
 
             if(j == length)
             {
+                free(r_link);
+                free(testlink_string);
                 return &(testlink->index_ptr);
             }
         }
+        free(testlink_string);
     }
 
+    free(r_link);
     return NULL;
 }
 
@@ -938,7 +970,7 @@ char * switch_order(char * url)
 
     testurl = NULL;
 
-    int shortlink = 0;
+    // int shortlink = 0;
 
     if(beginning == NULL)
     {
@@ -948,7 +980,7 @@ char * switch_order(char * url)
         // if(testurl != NULL)
         //     free(testurl);
         // return NULL;
-        shortlink = 1;
+        // shortlink = 1;
         beginning = url;
     }
     else
@@ -1190,7 +1222,7 @@ char * switch_order_domain(char * url, char * domain)
         beginning = strchr(beginning,'.')+1;         //(www.alumni.mcgill.ca) --> www.(alumni.mcgill.ca)
     }
 
-
+    // printf("url = %s, beginning = %s\n", url, beginning);
     if( (strchr(strchr(beginning,'.')+1,'.') == NULL) || 
         ((strchr(strchr(beginning,'.')+1,'.') > strchr(beginning,'/')) &&
         (strchr(strchr(beginning,'.')+1,'.') != NULL) && (strchr(beginning,'/') != NULL)))
@@ -1478,4 +1510,40 @@ struct node * add_sorted_link(struct Linked_list * parsed_links, char * str, cha
     exit(0);
 
     return NULL;
+}
+
+int add_hostname(char * url, char * domain)
+{
+    char * host = switch_order_domain(url,domain);
+    char * new_host = host_check("",host);
+
+    int i;
+
+    for(i = 0; i < hostnum; i++)
+    {
+        if(strcmp(new_host,hostlist[i]) == 0)
+        {
+            //we have a match
+            free(host);
+            free(new_host);
+            return 1;
+        }
+    }
+
+    // if we make it to this point, this signifies that the host was not in the list
+
+    if(hostnum < hostdesired)
+    {
+        FILE * ifp = fopen("hostnames.txt","a");
+        // add the new host
+        hostlist[hostnum++] = new_host;
+        free(host);
+        fprintf(ifp, "%s\n", new_host);
+        fclose(ifp);
+        return 1;
+    }
+
+    free(host);
+    free(new_host);
+    return 0;
 }

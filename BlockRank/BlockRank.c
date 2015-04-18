@@ -55,7 +55,7 @@ int adaptive = 0;
 
 int main (int argc, char *argv[]){
 	
-	char * filename;
+	char * filename = (char*)malloc(1024);
 	struct TwoDArray temp_array;
 	struct DubArray x_0, start_v, result;
 	struct blockends * blocks = (struct blockends*)malloc(sizeof(struct blockends));
@@ -82,10 +82,12 @@ int main (int argc, char *argv[]){
 		if(strlen(argv[1]) == 1)
 		{
 			adaptive = argv[1][0] - '0';
-			filename = "/home/al/Documents/C/ECSE-518-project/output.txt";
+			filename;
 		}
 		else
 			filename = argv[1];
+
+
 	}
 	else
 	{
@@ -247,7 +249,7 @@ struct DubArray get_PageRank(void * arguments)
 
 
 	// printf("P matrix in use:\n");
-	// print_DubMatrix(&P, v_size);
+	// print_DubMatrix(&P);
 	// printf("\n");
 
 	i = 0;
@@ -367,7 +369,7 @@ struct DubArray get_AdaptivePageRank(void * arguments)
 
 
 	// printf("P matrix in use:\n");
-	// print_DubMatrix(&P, v_size);
+	// print_DubMatrix(&P);
 	// printf("\n");
 
 	i = 0;
