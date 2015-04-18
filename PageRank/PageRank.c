@@ -1,3 +1,12 @@
+/*
+To run this program, type the following into the terminal:
+./pagerank <location of file containing web graph if not in this folder> [0/1/2]
+
+0 = pure pagerank
+1 = APR
+2 = MAPR
+
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -9,7 +18,7 @@
 #include "dubvmalg.h"
 
 #define PERIODAD	8
-#define PERIODDEL	3
+#define PERIODDEL	1
 
 // struct IntArray
 // {
@@ -19,23 +28,27 @@
 
 
 struct DubArray initialize_graph(struct TwoDArray * a, struct DubArray * no_out);
-struct DubArray PageRank(struct DubArray * A, struct DubArray * d, struct DubArray * x_0, struct DubArray * v, int * iter, double epsilon);
-struct DubArray filterAPR(struct DubArray * A, struct DubArray * d, struct DubArray * x_before, struct DubArray * v, int * iter, double epsilon);
-struct DubArray filterMAPR(struct DubArray * A, struct DubArray * d, struct DubArray * x_before, struct DubArray * v, int * iter, double epsilon);
+struct DubArray PageRank(struct DubArray * A, struct DubArray * d, struct DubArray * x_0, struct DubArray * v, 
+	int * iter, double epsilon);
+struct DubArray filterAPR(struct DubArray * A, struct DubArray * d, struct DubArray * x_before, struct DubArray * v,
+	int * iter, double epsilon);
+struct DubArray filterMAPR(struct DubArray * A, struct DubArray * d, struct DubArray * x_before, struct DubArray * v, 
+	int * iter, double epsilon);
 void obtain_graph_VE(char * filename, struct TwoDArray * a);
 void print_order(struct DubArray * result);
-void add_directory(char ** str, int size, char * file);
+char * add_directory(char ** str, int size, char * file);
 
 
-double epsilon = 0.001;
+double epsilon;
 
-int adaptive = 0;
+int adaptive;
 
 int * converge;
 
-int main (int argc, char *argv[]){
-	
+int main (int argc, char *argv[])
+{	
 	char * filename = (char*)malloc(1024);
+	char * new_filename;
 	struct TwoDArray temp_array;
 	struct DubArray x_0, start_v, result, A,d;
 	// char filenum;
@@ -44,15 +57,19 @@ int main (int argc, char *argv[]){
 	int i, itercount = 0;
 	int * histo;
 	int max = 0;
+	int remove_filename = 0;
+
+	epsilon = 0.001;
+	adaptive = 0;
 
 	construct_2DArray(&temp_array);
 
 	// printf("Enter graph filename: ");
-	// scanf("%s", filename);
+	// scanf("%s", new_filename);
 	if (argc == 3)
 	{
 		
-		filename = argv[1];
+		new_filename = argv[1];
 		adaptive = argv[2][0] - '0';
 
 	}
@@ -61,20 +78,21 @@ int main (int argc, char *argv[]){
 		if(strlen(argv[1]) == 1)
 		{
 			adaptive = argv[1][0] - '0';
-			add_directory(&filename,1024,"output.txt");
+			new_filename = add_directory(&filename,1024,"output.txt");
+			remove_filename = 1;
 		}
 		else
-			filename = argv[1];
+			new_filename = argv[1];
 	}
 	else
 	{
-		filename = "web-Google.txt";
+		new_filename = "web-Google.txt";
 	}
 	// printf("Type of starting x <e>ven/<o>nes: ");
 	// scanf("%s", x_type);
 	// x_type = "e";
 
-	obtain_graph_VE(filename,&temp_array);
+	obtain_graph_VE(new_filename,&temp_array);
 
 	d = initialize_vector(temp_array.size,0);
 	printf("Obtaining initial graph matrix\n");
@@ -95,7 +113,7 @@ int main (int argc, char *argv[]){
 	}
 
 	// free(x_type);
-	histo = (int*)calloc((int)(temp_array.size),sizeof(int));
+	histo = (int*)calloc(2048,sizeof(int));
 	start_v = initialize_vector((int)(temp_array.size), fraction );
 	x_0 = initialize_vector((int)(temp_array.size), x_vals);
 	converge = (int*)calloc((int)(temp_array.size),sizeof(int));
@@ -103,17 +121,17 @@ int main (int argc, char *argv[]){
 	clock_t start = clock(), diff;
 	if(adaptive == 1)
 	{
-		printf("Using adaptive PageRank on graph in %s\n", filename);
+		printf("Using adaptive PageRank on graph in %s\n", new_filename);
 		result = filterAPR(&A, &d, &x_0, &start_v, &itercount, epsilon);
 	}
 	else if (adaptive == 2)
 	{	
-		printf("Using modified adaptive PageRank on graph in %s\n", filename);
+		printf("Using modified adaptive PageRank on graph in %s\n", new_filename);
 		result = filterMAPR(&A,&d, &x_0, &start_v, &itercount, epsilon);	
 	}
 	else
 	{	
-		printf("Using pure PageRank on graph in %s\n", filename);
+		printf("Using pure PageRank on graph in %s\n", new_filename);
 		result = PageRank(&A,&d, &x_0, &start_v, &itercount, epsilon);		
 	}
 	diff = clock() - start;
@@ -150,16 +168,23 @@ int main (int argc, char *argv[]){
 		// printf("converge[%d] = %d \n", i,converge[i]);
 		histo[converge[i]] += 1;
 		if (converge[i] > max)
+		{
 			max = converge[i];
+		}
 	}
 
 	FILE * conv = fopen("convegence_histo.txt","w");
 	for(i = 0; i < max; i++)
+	{
 		fprintf(conv,"histogram[%d] = %d\n",i,histo[i] );
+	}
 	fclose(conv);
 	// printf("\n");
 
 	free(converge);
+	if (remove_filename)
+		free(new_filename);
+	free(filename);
 	free(histo);
 	free(A.array);
 	free(d.array);
@@ -193,7 +218,8 @@ int main (int argc, char *argv[]){
 
 
 
-struct DubArray PageRank(struct DubArray * A, struct DubArray * d, struct DubArray * x_before, struct DubArray * v, int * iter, double epsilon)
+struct DubArray PageRank(struct DubArray * A, struct DubArray * d, struct DubArray * x_before, struct DubArray * v, 
+	int * iter, double epsilon)
 {	
 	struct DubArray ones,x_after;
 	int v_size,i; 
@@ -501,8 +527,9 @@ struct DubArray filterMAPR(struct DubArray * A,  struct DubArray * d,struct DubA
 				// if the function determines that a certain link's pagerank has converged, the row AND column
 				// corresponding to that element number are zeroed
 			// A_CN is the matrix containing elements corresponding to edges between converged and non-converged links
-				// if the function determines that a certain link's pagerank has converged
-			detect_convergedMAPR(x_before, &x_after, &x_converged, epsilon, &C, &A_NN, &A_CN, &converged_count);
+				// if the function determines that a certain link's pagerank has converged, then that column
+				// from A is added and all the rows for which C[element] = 0 are zeroed
+			detect_convergedMAPR(x_before, &x_after, &x_converged, epsilon, &C, A, &A_NN, &A_CN, &converged_count);
 
 			if (converged_count == v_size)
 			{
@@ -518,6 +545,17 @@ struct DubArray filterMAPR(struct DubArray * A,  struct DubArray * d,struct DubA
 
 			free(y.array);
 			y = alphaAtimesx(&A_CN,x_before);
+
+			// printf("Converged = \n");
+			// for(i = 0; i < v_size; i++)
+			// {
+			// 	printf("%d", C[i]);
+			// }
+			// printf("\nA_NN = \n");
+			// print_DubMatrix(&A_NN);
+			// printf("A_CN = \n");
+			// print_DubMatrix(&A_CN);
+			// sleep(5);
 		}
 
 		if (verbose[0] == 'y' || verbose[0] == 'Y' || verbose[0] == '\n')
@@ -535,6 +573,8 @@ struct DubArray filterMAPR(struct DubArray * A,  struct DubArray * d,struct DubA
 		{
 			x_test = alphaAtimesx(A,x_before);
 			delta = differce_vector_length(&x_test,x_before);
+			// printf("delta = %7.6f\n",delta );
+			// sleep(1);
 			free(x_test.array);
 		}
 
@@ -557,6 +597,7 @@ struct DubArray filterMAPR(struct DubArray * A,  struct DubArray * d,struct DubA
 	free(x_converged.array);
 	free(C);
 	free(zeros.array);
+	free(y.array);
 
 	return x_after;
 }
@@ -740,18 +781,22 @@ struct DubArray initialize_graph(struct TwoDArray * a, struct DubArray * no_out)
 	return matrix_in_array;
 }
 
-void add_directory(char ** str, int size, char * file)
+char * add_directory(char ** str, int size, char * file)
 {
-	getcwd(*str,size);
+	char * result = (char*)calloc(size,sizeof(char));
+	memcpy(result,*str,size);
+	getcwd(result,size);
 
-	char * test = *str;
+	char * test = result;
 
 	while(strchr(test,'/') != NULL)
 	{
 		test = strchr(test,'/')+1;
 	}
 
-	strcpy(&((*str)[test-*str]),file);
+	strcpy(&((result)[test-result]),file);
+
+	return result;
 
 }
 

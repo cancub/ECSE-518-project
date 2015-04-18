@@ -14,11 +14,12 @@ struct DubArray makecopy(struct DubArray * a);
 double L1_difference(struct DubArray * x1, struct DubArray * x0);
 void detect_converged(struct DubArray * before, struct DubArray * after, struct DubArray * converged, double epsilon, int ** C,
  struct DubArray * A, int * count);
-void detect_convergedMAPR(struct DubArray * before, struct DubArray * after, struct DubArray * converged, double epsilon, int ** C,
- struct DubArray * A, int * count);
+void detect_convergedMAPR(struct DubArray * before, struct DubArray * after, struct DubArray * converged, double epsilon, int ** C, 
+	struct DubArray * A, struct DubArray * A_NN, struct DubArray * A_CN, int * count);
 void zero_cols(struct DubArray * matrix, int * cols);
 void zero_rows(struct DubArray * matrix, int * rows);
 void mtranspose(struct DubArray * A, int n);
+void modify_CN(struct DubArray * A, struct DubArray * A_CN, int n, int * cols_to_add, int ** C);
 
 
 #endif

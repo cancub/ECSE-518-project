@@ -2,6 +2,7 @@
 #include <cblas.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <stddef.h>
 #include <math.h>
 
@@ -110,21 +111,7 @@ void detect_converged(struct DubArray * before, struct DubArray * after, struct 
 	int * to_zero = (int*)calloc(n,sizeof(int));
 	int num_to_zero = 0;
 
-	// printf("BEFORE\t\tAFTER\n");
-
-	// for(i = 0; i < test_after.size; i++)
-	// {
-	// 	printf("%10.8f\t%10.8f\n",before->array[i],test_after.array[i] );
-	// }
-
-	// printf("\n");
-
 	alphaxplusy_y(-1,before,&test_after);
-	// printf("DIFFERENCE\n");
-	// for(i = 0; i < test_after.size; i++)
-	// {
-	// 	printf("%f\n",test_after.array[i] );
-	// }
 
 	for(i = 0; i < test_after.size;i++)
 	{
@@ -149,7 +136,7 @@ void detect_converged(struct DubArray * before, struct DubArray * after, struct 
 }
 
 void detect_convergedMAPR(struct DubArray * before, struct DubArray * after, struct DubArray * converged, double epsilon, int ** C, 
-	struct DubArray * A, int * count)
+	struct DubArray * A, struct DubArray * A_NN, struct DubArray * A_CN, int * count)
 {
 	int i;
 	int n = (int)(before->size);
@@ -159,22 +146,8 @@ void detect_convergedMAPR(struct DubArray * before, struct DubArray * after, str
 	int * to_zero = (int*)calloc(n,sizeof(int));
 	int num_to_zero = 0;
 
-	// printf("BEFORE\t\tAFTER\n");
-
-	// for(i = 0; i < test_after.size; i++)
-	// {
-	// 	printf("%10.8f\t%10.8f\n",before->array[i],test_after.array[i] );
-	// }
-
-	// printf("\n");
-
 	alphaxplusy_y(-1,before,&test_after);
-	// printf("DIFFERENCE\n");
-	// for(i = 0; i < test_after.size; i++)
-	// {
-	// 	printf("%f\n",test_after.array[i] );
-	// }
-
+	
 	for(i = 0; i < test_after.size;i++)
 	{
 		if((*C)[i] != 1)
@@ -191,9 +164,55 @@ void detect_convergedMAPR(struct DubArray * before, struct DubArray * after, str
 		}
 	}
 
-	zero_rows(A,to_zero);
+	// remove the rows and columns from A_NN as these have converged
+	zero_rows(A_NN,to_zero);
+	zero_cols(A_NN,to_zero);
+
+	// the same rows that we want to zero for A_NN are the columns that we want to 
+	// add from A for A_CN
+	modify_CN(A, A_CN,n, to_zero,C);
 
 	free(test_after.array);
+	free(to_zero);
+}
+
+void modify_CN(struct DubArray * A, struct DubArray * A_CN, int n, int * cols_to_add, int ** C)
+{
+	// here we want to, in order,
+	// Add the columns to A_CN from A that correspond to the values in cols_to_add
+	// remove all the rows corresponding to the values of C that are 0
+
+	int i;
+	int * to_zero = (int*)calloc(n,sizeof(int));
+	int num_to_zero = 0;
+
+	//transpose to add columns as rows
+	mtranspose(A,n);
+	mtranspose(A_CN,n);
+
+	// print_DubMatrix(A);
+	for(i = 0; cols_to_add[i] != 0; i++)
+	{
+		cblas_dcopy(n,&(A->array[(cols_to_add[i]-1)*n]),1,&(A_CN->array[(cols_to_add[i]-1)*n]),1);
+		// print_DubMatrix(A_CN);
+		// sleep(1);
+	}
+
+	mtranspose(A,n);
+	mtranspose(A_CN,n);
+
+	//build the list of indices of elements that have converged
+	for(i = 0; i < n; i++)
+	{
+		if((*C)[i] == 1)
+		{
+			to_zero[num_to_zero++] = i+1;
+		}
+	}
+
+	//zero those rows
+	zero_rows(A_CN,to_zero);
+
 	free(to_zero);
 }
 
