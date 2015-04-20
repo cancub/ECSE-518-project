@@ -77,6 +77,7 @@ char * flipper(char * test);
 char * switch_order_domain(char * url, char * domain);
 char * switch_order(char * url);
 int add_hostname(char * url, char * domain);
+char * add_num_links_and_date(char * fname, char * num_links_str);
 
 
 int index_under_wget = 1;
@@ -140,25 +141,10 @@ int main(int argc, char *argv[])
     maxdepth_str = argv[3];
     maxdepth = string_to_int(maxdepth_str);
 
-    time_t rawtime;
-    struct tm *info;
-    char buffer[80];
-
-    time( &rawtime );
-
-    info = localtime( &rawtime );
-
-    strftime(buffer,80,"%x - %I:%M%p", info);
-
-    raw_links = (char*)malloc(2048);
-    strcpy(raw_links,"raw_links_");
-    strcpy(&(raw_links[strlen("raw_links_")]),totallinks_str);
-
-    strcpy(&(raw_links[strlen("raw_links_")]),buffer);
-    output = (char*)malloc(2048);
-    strcpy(output,"output_");
-    filtered = (char*)malloc(2048);
-    strcpy(filtered,"filtered_links_");
+    
+    raw_links = add_num_links_and_date("raw_links",totallinks_str);    
+    output = add_num_links_and_date("output",totallinks_str);
+    filtered = add_num_links_and_date("filtered_links",totallinks_str);
 
     FILE * ofp = fopen(output,"w");
     if(ofp == NULL)
@@ -1614,4 +1600,29 @@ int add_hostname(char * url, char * domain)
     free(host);
     free(new_host);
     return 0;
+}
+
+char * add_num_links_and_date(char * fname, char* num_links_str)
+{
+    time_t rawtime;
+    struct tm *info;
+    char buffer[80];
+    char * result = (char*)malloc(2048);
+    time( &rawtime );
+
+    info = localtime( &rawtime );
+
+    strftime(buffer,80,"%Y_%m_%d_%H_%M_%S", info);
+
+    // int buffer_string_length = strlen(buffer);
+
+    strcpy(result,fname);
+    strcat(result,"_");
+    strcpy(&(result[strlen(result)]),num_links_str);
+    strcat(result,"_");
+    strcpy(&(result[strlen(result)]),buffer);
+    strcat(result,".txt");
+
+    return result;
+
 }
