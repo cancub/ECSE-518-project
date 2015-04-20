@@ -1,3 +1,17 @@
+/*
+To run this program, simply run "make" then 
+./webcrawler <website in the format of http://etc> <maximum number fo links> <maximum depth of links>
+
+as an example:
+./webcrawler http://www.mcgill.ca 10000 20
+
+the output will be in two files:
+filtered_links.txt and output.txt
+with output containing the edges of the graph, with different hosts seperated by a -1 -1 edge
+*/
+
+
+
 // credit to user Jay Taylor for the wget call used here to retreive hyperlinks from a webpage
 // http://stackoverflow.com/a/2804721
 
@@ -69,7 +83,7 @@ int index_under_wget = 1;
 char * raw_links;
 int totallinks, maxdepth;
 int hostnum = 0;
-int hostdesired = 1;
+int hostdesired = 50;
 
 int thread_test;
 char ** hostlist;
