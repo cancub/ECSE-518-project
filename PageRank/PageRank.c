@@ -60,8 +60,8 @@ int main (int argc, char *argv[])
 	// char * x_type = (char*)malloc(sizeof(char));
 	double x_vals,fraction;
 	int i, itercount = 0;
-	int * histo;
-	int max = 0;
+	// int * histo;
+	// int max = 0;
 	int remove_filename = 0;
 	double c = 0.85;
 
@@ -689,7 +689,7 @@ void obtain_graph_VE(char * filename, struct TwoDArray * a)
 			// there should be two values listed in this directed graph on each line
 			// i = from
 			// j = to
-			if(i < 60000 && j < 60000)
+			if(i > 0 && j > 0)
 			{
 				// printf("i = %d, j = %d, array size = %d\n",i,j, (int)(a->size));
 
